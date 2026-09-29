@@ -1,0 +1,131 @@
+/* Card */
+.card {
+  width: 100%;
+  max-width: var(--card-width);
+  padding: var(--space-8) var(--space-6);
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.card__header {
+  margin-bottom: var(--space-6);
+}
+
+.card__title {
+  font-size: var(--font-size-xl);
+}
+
+.card__subtitle {
+  margin-top: var(--space-1);
+  color: var(--color-text-muted);
+}
+
+.card__footer {
+  margin-top: var(--space-6);
+  text-align: center;
+}
+
+/* Form & fields */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.field__label {
+  font-weight: var(--font-weight-bold);
+}
+
+.field__required {
+  margin-left: var(--space-1);
+  color: var(--color-error);
+}
+
+.field__hint {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.field__input {
+  padding: var(--space-3);
+  font: inherit;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.field__input--invalid {
+  border-color: var(--color-error);
+  border-width: 2px;
+}
+
+.field__error {
+  font-size: var(--font-size-sm);
+  color: var(--color-error);
+}
+
+/* Button */
+.button {
+  padding: var(--space-3) var(--space-6);
+  font: inherit;
+  font-weight: var(--font-weight-bold);
+  border: var(--border-width) solid transparent;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background-color var(--transition);
+}
+
+.button--primary {
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
+}
+
+.button--primary:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+.button--secondary {
+  background: var(--color-surface);
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.button--full {
+  width: 100%;
+}
+
+.button:disabled {
+  background: var(--color-disabled);
+  cursor: not-allowed;
+}
+
+/* Alert */
+.alert {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius);
+  border-left: 4px solid;
+}
+
+.alert--error {
+  color: var(--color-error);
+  background: var(--color-error-bg);
+}
+
+.alert--success {
+  color: var(--color-success);
+  background: var(--color-success-bg);
+  margin-bottom: var(--space-4);
+}
+
+.prompt-link {
+  color: var(--color-text-muted);
+}

@@ -1,0 +1,8 @@
+# Store every text file with LF line endings, even when committed from Windows.
+# Without this, Git on Windows converts files to CRLF and "npm run format:check" fails.
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.png binary
+*.jpg binary
+*.ico binary

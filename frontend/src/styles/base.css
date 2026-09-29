@@ -1,0 +1,29 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-family);
+  font-size: var(--font-size-md);
+  line-height: var(--line-height);
+  color: var(--color-text);
+  background: var(--color-background);
+}
+
+h1,
+p {
+  margin: 0;
+}
+
+a {
+  color: var(--color-primary);
+}
+
+/* A clearly visible focus outline is required for keyboard users. */
+:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
