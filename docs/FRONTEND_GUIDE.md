@@ -38,9 +38,11 @@ only `styles/` and `components/ui/` change. Each change stays in one place.
 4. `LoginForm` calls `useZodForm({ schema: loginSchema, initialValues, onSubmit })` and passes
    the result to `<Form fields={LOGIN_FIELDS} form={form} … />`.
 5. `Form` loops over `LOGIN_FIELDS` and renders one `Input` per field.
-6. **Typing** → `handleChange` stores the value and hides that field's old error.
-7. **Leaving a field (blur)** → `handleBlur` validates the whole form with Zod and shows the
-   error for *that field only* (so the user isn't shouted at for fields not reached yet).
+6. **Typing** → `handleChange` stores the value and marks the field as *touched*. On every
+   render the hook re-runs Zod on all values and shows errors for touched fields only — so the
+   red message updates **live on every keystroke** and disappears the moment the value is valid.
+7. **Leaving a field (blur)** → `handleBlur` marks it touched too, so tabbing past an empty
+   field shows "required". Fields the user hasn't reached yet stay quiet.
 8. **Submit** → `useFormSubmit.handleSubmit`:
    - `event.preventDefault()` stops the browser reloading the page.
    - If already submitting → ignore (double-submit protection).
@@ -126,7 +128,12 @@ only `styles/` and `components/ui/` change. Each change stays in one place.
 `registerSchema.js`
 
 - Rules are chained; Zod checks them in order and we show the **first** failure per field.
-  An empty password shows "Password is required.", not six messages at once.
+- **Password** — the rules (length, upper, lower, digit, special) live in
+  `constants/passwordRules.js` as a list of `{ id, label, pattern }`. The schema checks
+  `PASSWORD_RULES.every(rule => rule.pattern.test(password))`, and the on-screen checklist
+  displays the same list. One source of truth: the UI can never show a rule that validation
+  doesn't enforce. The error line is a single summary ("does not meet all the requirements
+  listed above"); the checklist shows *which* rule is missing.
 - `.min(1)` before `.min(LIMITS…)` — so an empty field says "required", not "must be 2–50 characters".
 - `email: ….pipe(z.email())` — first trim and check length, then *pipe* the result into the
   email-format check.
@@ -140,7 +147,15 @@ only `styles/` and `components/ui/` change. Each change stays in one place.
 
 ### `src/hooks/` — reusable form behaviour
 
-`useZodForm.js` — *Holds form values and per-field errors, and validates with Zod on blur.*
+`useZodForm.js` — *Holds form values and shows live Zod errors for every field the user has
+typed in or left.*
+
+- **Errors are not stored in state; they are calculated.** State holds only `values` and
+  `touched` (`{ phone: true }`). `errors` = run the schema on `values`, keep only touched
+  fields. Because it is recalculated every time `values` changes, validation is live, and errors
+  can never get out of sync with the values (e.g. editing the password immediately re-checks
+  "Confirm password").
+- `useMemo(…, [schema, values, touched])` — only recalculates when one of those changes.
 
 - `values` state: `{ username: '', password: '' }`. Each input is **controlled**: its value comes
   from state and every keystroke updates state.
@@ -152,6 +167,7 @@ only `styles/` and `components/ui/` change. Each change stays in one place.
 `useFormSubmit.js` — *Validates everything on submit, then runs the API call while tracking
 loading and server errors.*
 
+- `markAllTouched()` — on submit every field shows its error, even ones never visited.
 - `if (isSubmitting) return;` + disabled button = double-submit protection.
 - `focusFirstInvalidField` — moves focus to the first invalid field so keyboard and
   screen-reader users land on the problem. Uses `form.elements.namedItem(name)`, so no ids
@@ -172,6 +188,9 @@ All have JSDoc, PropTypes, default values, and **no hardcoded text or colors**.
 | `Input`        | A labelled input whose hint and error are linked for screen readers.                  |
 | `FieldLabel`   | The `<label>` with an optional required marker.                                        |
 | `FieldMessage` | Hint or error text under a field; renders nothing when empty.                         |
+| `FieldHint`    | Chooses what goes under the label: a requirements checklist or plain hint text.       |
+| `RequirementList` | Live checklist: marks each rule met/unmet for the current value.                   |
+| `RequirementItem` | One checklist line: icon (•/✗/✓) + text + hidden "(met)"/"(not met)" for screen readers. |
 | `Card`         | A titled panel exposed as a labelled `<section>`.                                      |
 | `Alert`        | Form-level success/error message, announced to screen readers.                        |
 | `Form`         | Renders fields from a definition array + error alert + submit button.                 |
@@ -238,15 +257,17 @@ Pages are thin: they arrange a `Card` and a feature component. `LoginPage` also 
 - `layout.css` / `components.css` — class-based styles (`.field__input--invalid`, a BEM-style
   naming: block `__element` `--modifier`). No inline styles anywhere.
 
-### Tests (`*.test.js(x)`, 38 tests)
+### Tests (`*.test.js(x)`, 51 tests)
 
 | File                      | Proves                                                                      |
 | ------------------------- | --------------------------------------------------------------------------- |
 | `loginSchema.test.js`     | Required fields, whitespace-only rejected, username trimmed.                |
 | `registerSchema.test.js`  | Each rule with a failing example; mismatch shown even with other errors.    |
+| `passwordRules.test.js`   | Each password rule reports exactly which requirement a password fails.      |
+| `RequirementList.test.jsx`| Pending before typing; met/unmet per rule, with text (not only color).      |
 | `Input.test.jsx`          | Label linked, error announced, `aria-invalid` and description set.          |
 | `LoginForm.test.jsx`      | Empty submit → errors + focus; 401 → generic message; button disabled.       |
-| `RegisterForm.test.jsx`   | All fields labelled; validates on blur; error clears on typing.              |
+| `RegisterForm.test.jsx`   | No errors on a fresh form; live errors while typing; checklist ticks off; live mismatch. |
 | `apiClient.test.js`       | 400/404/500/502 → right message; network failure separate; Bearer header.   |
 
 `vi.stubGlobal('fetch', …)` replaces the real `fetch` with a fake, so tests never need a
@@ -306,7 +327,8 @@ Development-only checks; it renders components twice to reveal side effects. No 
 
 1. `npm run dev`, press **Tab** from the top of the page: the skip link appears first.
 2. Submit the empty Register form: all errors show and focus jumps to Full name.
-3. Type a bad phone, press Tab: the error appears; start typing again: it disappears.
-4. Change `PASSWORD_MIN` in `constants/validation.js` to 10: both the rule and the hint text change.
+3. Type `98765` in Phone: the red error appears while typing; finish the 10 digits: it disappears.
+   Type in Password: each rule turns from ✗ red to ✓ green as you satisfy it.
+4. Change `PASSWORD_MIN` in `constants/validation.js` to 10: the rule *and* the checklist text change.
 5. Change `--color-primary` in `styles/tokens.css`: the whole app recolors.
 6. Break a rule on purpose (add `console.log` somewhere) and run `npm run lint` to see it fail.

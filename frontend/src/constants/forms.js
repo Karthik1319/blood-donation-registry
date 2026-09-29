@@ -1,4 +1,5 @@
 import { HINTS, LABELS } from '@/constants/labels';
+import { PASSWORD_RULES } from '@/constants/passwordRules';
 
 // Field definitions drive the forms, so each input's JSX is written once (in Input.jsx).
 // "name" must match the key in the Zod schema for that form.
@@ -29,7 +30,7 @@ export const REGISTER_FIELDS = Object.freeze([
     label: LABELS.FIELD_PASSWORD,
     type: 'password',
     autoComplete: 'new-password',
-    hint: HINTS.PASSWORD,
+    requirements: PASSWORD_RULES,
   },
   {
     name: 'confirmPassword',

@@ -1,9 +1,17 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useFormSubmit } from '@/hooks/useFormSubmit';
 import { getFieldErrors } from '@/utils/getFieldErrors';
 
+// Only fields the user has interacted with show errors, so a fresh form isn't covered in red.
+function getVisibleErrors(schema, values, touched) {
+  const result = schema.safeParse(values);
+  if (result.success) return {};
+  const allErrors = getFieldErrors(result.error);
+  return Object.fromEntries(Object.entries(allErrors).filter(([field]) => touched[field]));
+}
+
 /**
- * Holds form values and per-field errors, validating with a Zod schema on blur and on submit.
+ * Holds form values and shows live Zod errors for every field the user has typed in or left.
  * @param {object} options
  * @param {import('zod').ZodType} options.schema - Zod schema describing valid values.
  * @param {object} options.initialValues - Starting value for every field.
@@ -11,22 +19,25 @@ import { getFieldErrors } from '@/utils/getFieldErrors';
  */
 export function useZodForm({ schema, initialValues, onSubmit }) {
   const [values, setValues] = useState(initialValues);
-  const [errors, setErrors] = useState({});
-  const submit = useFormSubmit({ schema, values, setErrors, onSubmit });
+  const [touched, setTouched] = useState({});
+  // Errors are recalculated from the values on every change, which is what makes them "live".
+  const errors = useMemo(
+    () => getVisibleErrors(schema, values, touched),
+    [schema, values, touched],
+  );
+
+  const markTouched = (name) => setTouched((previous) => ({ ...previous, [name]: true }));
+  const markAllTouched = () =>
+    setTouched(Object.fromEntries(Object.keys(initialValues).map((name) => [name, true])));
+  const submit = useFormSubmit({ schema, values, markAllTouched, onSubmit });
 
   const handleChange = (event) => {
     const { name, value } = event.target;
     setValues((previous) => ({ ...previous, [name]: value }));
-    // Hide the old message while the user is fixing the field; it is re-checked on blur.
-    setErrors((previous) => ({ ...previous, [name]: undefined }));
+    markTouched(name);
   };
 
-  const handleBlur = (event) => {
-    const { name } = event.target;
-    const result = schema.safeParse(values);
-    const fieldErrors = result.success ? {} : getFieldErrors(result.error);
-    setErrors((previous) => ({ ...previous, [name]: fieldErrors[name] }));
-  };
+  const handleBlur = (event) => markTouched(event.target.name);
 
   return { values, errors, handleChange, handleBlur, ...submit };
 }

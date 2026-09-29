@@ -15,6 +15,7 @@ export const PATTERNS = Object.freeze({
   FULL_NAME: /^[A-Za-z][A-Za-z .'-]*$/,
   USERNAME: /^[A-Za-z0-9_]+$/,
   PHONE: new RegExp(`^\\d{${LIMITS.PHONE_DIGITS}}$`),
+  PASSWORD_LENGTH: new RegExp(`^.{${LIMITS.PASSWORD_MIN},${LIMITS.PASSWORD_MAX}}$`),
   HAS_UPPERCASE: /[A-Z]/,
   HAS_LOWERCASE: /[a-z]/,
   HAS_DIGIT: /\d/,

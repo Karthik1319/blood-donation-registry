@@ -1,16 +1,14 @@
 import { z } from 'zod';
 import { VALIDATION_MESSAGES as MSG } from '@/constants/messages';
+import { PASSWORD_RULES } from '@/constants/passwordRules';
 import { LIMITS, PATTERNS } from '@/constants/validation';
 
 const passwordSchema = z
   .string()
   .min(1, { error: MSG.PASSWORD_REQUIRED })
-  .min(LIMITS.PASSWORD_MIN, { error: MSG.PASSWORD_LENGTH })
-  .max(LIMITS.PASSWORD_MAX, { error: MSG.PASSWORD_LENGTH })
-  .regex(PATTERNS.HAS_UPPERCASE, { error: MSG.PASSWORD_UPPERCASE })
-  .regex(PATTERNS.HAS_LOWERCASE, { error: MSG.PASSWORD_LOWERCASE })
-  .regex(PATTERNS.HAS_DIGIT, { error: MSG.PASSWORD_DIGIT })
-  .regex(PATTERNS.HAS_SPECIAL, { error: MSG.PASSWORD_SPECIAL });
+  .refine((password) => PASSWORD_RULES.every((rule) => rule.pattern.test(password)), {
+    error: MSG.PASSWORD_REQUIREMENTS,
+  });
 
 const registerFields = z.object({
   fullName: z

@@ -39,11 +39,11 @@ describe('registerSchema', () => {
 
   it.each([
     ['', MSG.PASSWORD_REQUIRED],
-    ['Sh0rt!', MSG.PASSWORD_LENGTH],
-    ['lower0nly!', MSG.PASSWORD_UPPERCASE],
-    ['UPPER0NLY!', MSG.PASSWORD_LOWERCASE],
-    ['NoDigits!!', MSG.PASSWORD_DIGIT],
-    ['NoSpecial00', MSG.PASSWORD_SPECIAL],
+    ['Sh0rt!', MSG.PASSWORD_REQUIREMENTS],
+    ['lower0nly!', MSG.PASSWORD_REQUIREMENTS],
+    ['UPPER0NLY!', MSG.PASSWORD_REQUIREMENTS],
+    ['NoDigits!!', MSG.PASSWORD_REQUIREMENTS],
+    ['NoSpecial00', MSG.PASSWORD_REQUIREMENTS],
   ])('rejects password "%s"', (password, message) => {
     expect(errorsFor({ password, confirmPassword: password }).password).toBe(message);
   });

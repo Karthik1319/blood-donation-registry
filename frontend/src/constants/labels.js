@@ -35,11 +35,24 @@ export const LABELS = Object.freeze({
   REQUIRED_MARK: '*',
   REQUIRED_HINT: 'required',
 
+  RULE_MET: 'met',
+  RULE_NOT_MET: 'not met',
+  RULE_ICON_MET: '✓',
+  RULE_ICON_NOT_MET: '✗',
+  RULE_ICON_PENDING: '•',
+
   ALERT_ERROR_PREFIX: 'Error:',
   ALERT_SUCCESS_PREFIX: 'Success:',
 });
 
 export const HINTS = Object.freeze({
-  PASSWORD: `At least ${LIMITS.PASSWORD_MIN} characters with uppercase, lowercase, a number and a special character.`,
   PHONE: `${LIMITS.PHONE_DIGITS} digits, numbers only.`,
+});
+
+export const PASSWORD_RULE_LABELS = Object.freeze({
+  LENGTH: `${LIMITS.PASSWORD_MIN}–${LIMITS.PASSWORD_MAX} characters`,
+  UPPERCASE: 'One uppercase letter (A–Z)',
+  LOWERCASE: 'One lowercase letter (a–z)',
+  DIGIT: 'One number (0–9)',
+  SPECIAL: 'One special character (e.g. ! @ # $)',
 });

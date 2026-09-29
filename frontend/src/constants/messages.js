@@ -13,11 +13,7 @@ export const VALIDATION_MESSAGES = Object.freeze({
   PHONE_REQUIRED: 'Phone number is required.',
   PHONE_FORMAT: `Phone number must be exactly ${LIMITS.PHONE_DIGITS} digits.`,
   PASSWORD_REQUIRED: 'Password is required.',
-  PASSWORD_LENGTH: `Password must be ${LIMITS.PASSWORD_MIN}–${LIMITS.PASSWORD_MAX} characters.`,
-  PASSWORD_UPPERCASE: 'Password must contain at least one uppercase letter.',
-  PASSWORD_LOWERCASE: 'Password must contain at least one lowercase letter.',
-  PASSWORD_DIGIT: 'Password must contain at least one number.',
-  PASSWORD_SPECIAL: 'Password must contain at least one special character.',
+  PASSWORD_REQUIREMENTS: 'Password does not meet all the requirements listed above.',
   CONFIRM_PASSWORD_REQUIRED: 'Please confirm your password.',
   PASSWORDS_MISMATCH: 'Passwords do not match.',
 });

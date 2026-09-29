@@ -73,6 +73,36 @@
   color: var(--color-error);
 }
 
+/* Requirements checklist */
+.requirements {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--font-size-sm);
+}
+
+.requirement {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.requirement__icon {
+  width: var(--space-4);
+  font-weight: var(--font-weight-bold);
+}
+
+.requirement--pending {
+  color: var(--color-text-muted);
+}
+
+.requirement--unmet {
+  color: var(--color-error);
+}
+
+.requirement--met {
+  color: var(--color-success);
+}
+
 /* Button */
 .button {
   padding: var(--space-3) var(--space-6);

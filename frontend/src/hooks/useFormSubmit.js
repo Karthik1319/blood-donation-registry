@@ -13,10 +13,10 @@ function focusFirstInvalidField(formElement, fieldErrors) {
  * @param {object} options
  * @param {import('zod').ZodType} options.schema - Zod schema describing valid values.
  * @param {object} options.values - Current form values.
- * @param {(errors: object) => void} options.setErrors - Replaces the per-field error messages.
+ * @param {() => void} options.markAllTouched - Makes every field show its error.
  * @param {(data: object) => Promise<void>} options.onSubmit - Called with parsed, valid data.
  */
-export function useFormSubmit({ schema, values, setErrors, onSubmit }) {
+export function useFormSubmit({ schema, values, markAllTouched, onSubmit }) {
   const [formError, setFormError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -24,11 +24,10 @@ export function useFormSubmit({ schema, values, setErrors, onSubmit }) {
     event.preventDefault();
     // Guards against a second submit (e.g. pressing Enter twice) while a request is running.
     if (isSubmitting) return;
+    markAllTouched();
     const result = schema.safeParse(values);
-    const fieldErrors = result.success ? {} : getFieldErrors(result.error);
-    setErrors(fieldErrors);
     if (!result.success) {
-      focusFirstInvalidField(event.currentTarget, fieldErrors);
+      focusFirstInvalidField(event.currentTarget, getFieldErrors(result.error));
       return;
     }
 
