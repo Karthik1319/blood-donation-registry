@@ -1,0 +1,230 @@
+@import './tokens.css';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-family);
+  font-size: var(--font-size-md);
+  color: var(--color-text);
+  background: var(--color-bg);
+}
+
+a {
+  color: var(--color-primary);
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* ---------- Layout ---------- */
+.layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.layout__main {
+  flex: 1;
+  width: 100%;
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  padding: var(--space-xl) var(--space-md);
+}
+
+.header {
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
+}
+
+.header__inner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  align-items: center;
+  justify-content: space-between;
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  padding: var(--space-md);
+}
+
+.header__brand {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: inherit;
+  text-decoration: none;
+}
+
+.header__nav {
+  display: flex;
+  gap: var(--space-md);
+  align-items: center;
+}
+
+.header__link {
+  color: inherit;
+  text-decoration: none;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius);
+}
+
+.header__link.active {
+  text-decoration: underline;
+  font-weight: 700;
+}
+
+.footer {
+  padding: var(--space-md);
+  text-align: center;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+/* ---------- Card ---------- */
+.card {
+  width: 100%;
+  max-width: var(--card-max-width);
+  margin: 0 auto;
+  padding: var(--space-xl);
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.card__title {
+  margin: 0 0 var(--space-xs);
+  font-size: var(--font-size-xl);
+}
+
+.card__subtitle {
+  margin: 0 0 var(--space-lg);
+  color: var(--color-text-muted);
+}
+
+/* ---------- Form fields ---------- */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.field__label {
+  font-weight: 600;
+}
+
+.field__required {
+  color: var(--color-error);
+}
+
+.field__control {
+  padding: var(--space-sm) var(--space-md);
+  font: inherit;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.field__control--invalid {
+  border-color: var(--color-error);
+}
+
+.field__error {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-error);
+}
+
+/* ---------- Button ---------- */
+.button {
+  padding: var(--space-sm) var(--space-md);
+  font: inherit;
+  font-weight: 600;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.button--primary {
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
+}
+
+.button--primary:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+.button--secondary {
+  background: var(--color-surface);
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.button--full {
+  width: 100%;
+}
+
+/* ---------- Alert ---------- */
+.alert {
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius);
+  font-size: var(--font-size-sm);
+}
+
+.alert--error {
+  color: var(--color-error);
+  background: var(--color-error-bg);
+  border: 1px solid var(--color-error);
+}
+
+.alert--success {
+  color: var(--color-success);
+  background: var(--color-success-bg);
+  border: 1px solid var(--color-success);
+}
+
+/* ---------- Password checklist ---------- */
+.checklist {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--font-size-sm);
+}
+
+.checklist__title {
+  margin: 0 0 var(--space-xs);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.checklist__item--met {
+  color: var(--color-success);
+}
+
+.checklist__item--unmet {
+  color: var(--color-error);
+}
+
+.form-footer {
+  margin: var(--space-md) 0 0;
+  text-align: center;
+  font-size: var(--font-size-sm);
+}

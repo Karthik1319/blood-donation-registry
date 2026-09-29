@@ -1,0 +1,8 @@
+export const LIMITS = {
+  NAME_MIN: 2,
+  NAME_MAX: 50,
+  EMAIL_MAX: 100,
+  PHONE_DIGITS: 10,
+  PASSWORD_MIN: 8,
+  PASSWORD_MAX: 64,
+};

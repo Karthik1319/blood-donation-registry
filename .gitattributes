@@ -1,0 +1,2 @@
+# Keep LF line endings on Windows too, otherwise "npm run format:check" fails on the Dell laptop.
+* text=auto eol=lf
