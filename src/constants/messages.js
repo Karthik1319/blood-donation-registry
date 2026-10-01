@@ -30,4 +30,9 @@ export const MESSAGES = {
   EMAIL_TAKEN: 'An account with this email already exists',
   REGISTER_SUCCESS: 'Registration successful. Please log in.',
   GENERIC_ERROR: 'Something went wrong. Please try again.',
+  NETWORK_ERROR: 'Unable to reach the server. Check your connection and try again.',
+  BAD_REQUEST: 'Some details are invalid. Please check and try again.',
+  SESSION_EXPIRED: 'Your session has expired. Please log in again.',
+  FORBIDDEN: 'You do not have permission to access this page.',
+  NOT_FOUND: 'The requested item was not found.',
 };

@@ -1,28 +1,56 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import { AuthContext } from '@/context/AuthContext';
-import { clearSession, getStoredUser, saveSession } from '@/services/tokenStorage';
+import { logoutUser, refreshSession } from '@/services/authService';
+import { clearAccessToken, setAccessToken } from '@/services/tokenStorage';
 
 /**
- * Provides { user, login, logout } to the whole app.
+ * Provides { user, isRestoring, login, logout } to the whole app.
  * @param {object} props
  * @param {React.ReactNode} props.children - the app.
  */
 function AuthProvider({ children }) {
-  // Read the saved user once at start-up so a page refresh keeps the user logged in.
-  const [user, setUser] = useState(getStoredUser);
+  const [user, setUser] = useState(null);
+  // true until we know whether the refresh cookie still holds a valid session.
+  const [isRestoring, setIsRestoring] = useState(true);
 
-  const login = ({ token, user: loggedInUser }) => {
-    saveSession(token, loggedInUser);
-    setUser(loggedInUser);
+  // On page load the in-memory token is empty, so ask the server for a new one.
+  useEffect(() => {
+    let isActive = true;
+    refreshSession()
+      .then((session) => {
+        if (isActive) {
+          setAccessToken(session.accessToken);
+          setUser(session.user);
+        }
+      })
+      .catch(clearAccessToken)
+      .finally(() => {
+        if (isActive) {
+          setIsRestoring(false);
+        }
+      });
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  const login = (session) => {
+    setAccessToken(session.accessToken);
+    setUser(session.user);
   };
 
-  const logout = () => {
-    clearSession();
+  const logout = async () => {
+    await logoutUser();
+    clearAccessToken();
     setUser(null);
   };
 
-  return <AuthContext.Provider value={{ user, login, logout }}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{ user, isRestoring, login, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 AuthProvider.propTypes = {

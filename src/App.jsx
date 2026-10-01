@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
 import PageLayout from '@/components/layout/PageLayout';
 import { ROUTES } from '@/constants/routes';
 import AuthProvider from '@/context/AuthProvider';
+import ProtectedRoute from '@/features/auth/ProtectedRoute';
 import HomePage from '@/pages/HomePage';
 import LoginPage from '@/pages/LoginPage';
 import RegisterPage from '@/pages/RegisterPage';
@@ -13,7 +14,14 @@ function App() {
         <Routes>
           {/* Every route inside PageLayout gets the shared Header and Footer. */}
           <Route element={<PageLayout />}>
-            <Route path={ROUTES.HOME} element={<HomePage />} />
+            <Route
+              path={ROUTES.HOME}
+              element={
+                <ProtectedRoute>
+                  <HomePage />
+                </ProtectedRoute>
+              }
+            />
             <Route path={ROUTES.LOGIN} element={<LoginPage />} />
             <Route path={ROUTES.REGISTER} element={<RegisterPage />} />
             <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />

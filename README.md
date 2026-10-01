@@ -1,8 +1,13 @@
 # Blood Donation Registry — Frontend
 
 React (Vite, JavaScript) frontend for the Blood Donation Registry.
-Phase 1 scope: **project structure, shared Page Layout (Header + Footer), Login page and Registration form with Zod validation.**
-There is no backend yet: login/registration use a mock service (`src/services/authService.js`) that will later call the Spring Boot API.
+Scope so far: project structure, shared Page Layout (Header + Footer), Login and Registration forms with Zod
+validation, **API connection** for login/registration, secure token handling and RBAC groundwork.
+The Spring Boot backend is not built yet. Set `VITE_USE_MOCK_API` to choose between the real API and the
+in-memory mock (see below).
+
+Research notes: [`docs/token-storage.md`](docs/token-storage.md) (where to keep the token) and
+[`docs/rbac.md`](docs/rbac.md) (roles and where they are enforced).
 
 ## Tech stack
 
@@ -22,11 +27,34 @@ There is no backend yet: login/registration use a mock service (`src/services/au
 
 ```bash
 npm ci          # installs the exact versions from package-lock.json
-cp .env.example .env    # Windows (cmd): copy .env.example .env   (optional for now)
 npm run dev     # open http://localhost:5173
 ```
 
-**Demo login:** `admin@blood.org` / `Admin@123` (or register a new user — it is kept in memory until page reload).
+## Mock API vs real API
+
+`.env.development` (loaded by `npm run dev`) has the switch:
+
+| `VITE_USE_MOCK_API` | Behaviour                                                                                                                                                                                  |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `true` (default)    | No backend needed. Demo logins: `admin@blood.org` / `Admin@123`, `staff@blood.org` / `Staff@123`. Registered users last until reload; a reload logs you out (no real cookie in mock mode). |
+| `false`             | Calls Spring Boot. Start the backend on `http://localhost:8080`; Vite forwards `/api/*` to it. If it isn't running you'll see an error message on submit.                                  |
+
+Restart `npm run dev` after changing the file.
+
+## API contract (for the Spring Boot backend)
+
+All paths are under `/api`. JSON in and out. Errors never need a body; the frontend shows its own safe messages.
+
+| Endpoint                  | Request body                                       | Success                                           | Errors used by the UI                        |
+| ------------------------- | -------------------------------------------------- | ------------------------------------------------- | -------------------------------------------- |
+| `POST /api/auth/login`    | `{ email, password }`                              | `200 { accessToken, user }` + sets refresh cookie | `400`/`401` → "Invalid email or password"    |
+| `POST /api/auth/register` | `{ fullName, email, phone, bloodGroup, password }` | `201` (body optional)                             | `409` → email taken, `400` → invalid details |
+| `POST /api/auth/refresh`  | none (refresh cookie sent automatically)           | `200 { accessToken, user }` + rotates cookie      | `401` → stay logged out                      |
+| `POST /api/auth/logout`   | none                                               | `204`, cookie cleared                             | ignored; the frontend logs out anyway        |
+
+`user` = `{ fullName, email, role }` where `role` is `ADMIN`, `STAFF` or `DONOR`.
+Refresh cookie: `HttpOnly; Secure; SameSite=Strict; Path=/api/auth`.
+Any other failure maps to: `403` no permission, `404` not found, `5xx` generic error, no response → "Unable to reach the server".
 
 ## Scripts (quality gate — all must pass before a commit)
 
@@ -63,22 +91,26 @@ src/
 │   ├── messages.js           # Validation + server messages
 │   ├── limits.js             # Numeric limits (name length, password length…)
 │   ├── validation.js         # Regex patterns + PASSWORD_RULES
-│   ├── config.js             # App config (API URL, mock delay) + blood groups
-│   └── storageKeys.js        # sessionStorage keys
+│   ├── config.js             # App config (API URL, mock switch, timeout) + blood groups
+│   ├── api.js                # API endpoint paths + HTTP status codes
+│   └── roles.js              # Roles, permissions and which role has which permission
 ├── components/
 │   ├── ui/                   # Reusable, presentational only (no business logic, no text)
 │   │   ├── Button.jsx  Input.jsx  Select.jsx  FormField.jsx
-│   │   ├── Card.jsx  Alert.jsx  PasswordChecklist.jsx
+│   │   ├── Card.jsx  Alert.jsx  PasswordChecklist.jsx  LoadingMessage.jsx
 │   └── layout/               # Header, Footer, PageLayout
-├── features/auth/            # Feature components + Zod schemas for login/registration
+├── features/auth/            # Login/Registration forms, Zod schemas, ProtectedRoute
 ├── pages/                    # One component per route: LoginPage, RegisterPage, HomePage
-├── services/                 # The ONLY place that talks to the API (mock for now)
-│   ├── authService.js        # loginUser / registerUser
-│   ├── tokenStorage.js       # The ONLY place that reads/writes the token
-│   └── mockUsers.js          # Fake users; deleted when the backend is connected
+├── services/                 # The ONLY place that talks to the API
+│   ├── apiClient.js          # fetch wrapper: base URL, Bearer token, timeout, safe error messages
+│   ├── authApi.js            # Real calls: login, register, refresh, logout
+│   ├── mockAuthApi.js        # Same functions, in-memory (VITE_USE_MOCK_API=true)
+│   ├── authService.js        # Picks authApi or mockAuthApi; components import from here
+│   ├── tokenStorage.js       # The ONLY place that reads/writes the access token (memory only)
+│   └── mockUsers.js          # Fake users for mock mode
 ├── hooks/                    # useForm (form state + validation), useAuth (logged-in user)
 ├── context/                  # AuthContext + AuthProvider
-├── utils/                    # Small pure helpers (getFieldErrors, getErrorId, delay)
+├── utils/                    # Small pure helpers (getFieldErrors, getErrorId, delay, hasPermission)
 ├── styles/                   # tokens.css (design tokens) + global.css (classes)
 └── test/setup.js             # Test setup (jest-dom matchers, cleanup)
 ```
@@ -95,10 +127,17 @@ src/
 
 Client-side validation is for user experience only; the Spring Boot API must validate everything again.
 
-## Connecting the backend later
+## How the API connection works
 
-- Replace the function bodies in `src/services/authService.js` with `fetch` calls to
-  `${APP_CONFIG.API_BASE_URL}/auth/login` and `/auth/register`. Components do not change.
-- Delete `src/services/mockUsers.js` and `MOCK_DELAY_MS`.
+1. A form calls `loginUser`/`registerUser` from `services/authService.js`. Components never call `fetch`.
+2. `authService.js` sends the call to `authApi.js` (real) or `mockAuthApi.js`, based on `VITE_USE_MOCK_API`.
+3. `apiClient.js` sends the request with the Bearer token, a 15 s timeout and `credentials: 'include'` (for the cookie).
+4. On failure it throws an `ApiError` with a user-safe message chosen by HTTP status (bad input vs not found vs
+   server error vs offline). `useForm` shows that message in the form's `Alert`.
+5. On login, `AuthProvider` keeps the access token in memory and the user in state. On page reload it calls
+   `/auth/refresh` to restore the session (see `docs/token-storage.md`).
+
+## Next steps
+
 - Next screens (Donors, Donations, `/donors/:id/donations`) go in `features/donors`, `features/donations`
   and `pages/`, reusing the same `ui/` components and `useForm`.

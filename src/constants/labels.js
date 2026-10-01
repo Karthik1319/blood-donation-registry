@@ -18,6 +18,9 @@ export const LABELS = {
   REGISTER_LOADING: 'Registering...',
   HAVE_ACCOUNT: 'Already have an account?',
 
+  LOADING: 'Loading...',
+  ACCESS_DENIED_TITLE: 'Access denied',
+
   HOME_TITLE: 'Welcome',
   HOME_TEXT: 'You are logged in. Donor and donation screens will appear here.',
 

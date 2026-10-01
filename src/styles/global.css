@@ -228,3 +228,8 @@ a {
   text-align: center;
   font-size: var(--font-size-sm);
 }
+
+.loading {
+  text-align: center;
+  color: var(--color-text-muted);
+}

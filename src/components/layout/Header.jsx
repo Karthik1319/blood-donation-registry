@@ -1,6 +1,7 @@
 import { Link, NavLink } from 'react-router';
 import Button from '@/components/ui/Button';
 import { LABELS } from '@/constants/labels';
+import { ROLE_LABELS } from '@/constants/roles';
 import { ROUTES } from '@/constants/routes';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -17,7 +18,9 @@ function Header() {
           {/* Hiding links is UX, NOT security; the API must enforce every rule. */}
           {user ? (
             <>
-              <span>{user.fullName}</span>
+              <span>
+                {user.fullName} ({ROLE_LABELS[user.role]})
+              </span>
               <Button variant="secondary" onClick={logout}>
                 {LABELS.NAV_LOGOUT}
               </Button>

@@ -1,23 +1,19 @@
-import { STORAGE_KEYS } from '@/constants/storageKeys';
+// The access token lives ONLY in memory (this variable), never in localStorage or sessionStorage:
+// any injected script (XSS) can read web storage, and storage outlives the page.
+// After a page reload the token is gone on purpose; AuthProvider gets a fresh one from
+// the HttpOnly refresh cookie, which JavaScript cannot read at all.
+// Every read/write of the token must go through this file.
 
-// sessionStorage (not localStorage) so the login is forgotten when the browser tab closes.
-// Every read/write of the token must go through this file, so we can change storage in one place.
+let accessToken = null;
 
-export function saveSession(token, user) {
-  sessionStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, token);
-  sessionStorage.setItem(STORAGE_KEYS.AUTH_USER, JSON.stringify(user));
+export function setAccessToken(token) {
+  accessToken = token;
 }
 
-export function getToken() {
-  return sessionStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+export function getAccessToken() {
+  return accessToken;
 }
 
-export function getStoredUser() {
-  const storedUser = sessionStorage.getItem(STORAGE_KEYS.AUTH_USER);
-  return storedUser ? JSON.parse(storedUser) : null;
-}
-
-export function clearSession() {
-  sessionStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
-  sessionStorage.removeItem(STORAGE_KEYS.AUTH_USER);
+export function clearAccessToken() {
+  accessToken = null;
 }
