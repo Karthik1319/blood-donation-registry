@@ -20,6 +20,7 @@ export function loginUser(credentials) {
     method: 'POST',
     body: credentials,
     errorMessages: LOGIN_ERRORS,
+    isAuthRequest: true,
   });
 }
 
@@ -29,6 +30,7 @@ export function registerUser({ fullName, email, phone, bloodGroup, password }) {
     method: 'POST',
     body: { fullName, email, phone, bloodGroup, password },
     errorMessages: REGISTER_ERRORS,
+    isAuthRequest: true,
   });
 }
 
@@ -37,7 +39,10 @@ export function refreshSession() {
   // Callers share one request: refresh tokens are single-use (rotated by the server),
   // so two parallel calls (e.g. React StrictMode in dev) would make the second one fail.
   if (!pendingRefresh) {
-    pendingRefresh = apiRequest(API_ENDPOINTS.REFRESH, { method: 'POST' }).finally(() => {
+    pendingRefresh = apiRequest(API_ENDPOINTS.REFRESH, {
+      method: 'POST',
+      isAuthRequest: true,
+    }).finally(() => {
       pendingRefresh = null;
     });
   }
@@ -47,5 +52,7 @@ export function refreshSession() {
 /** POST /auth/logout: the server revokes the refresh token and clears its cookie. */
 export function logoutUser() {
   // Never fail: the user must be logged out locally even if the server is unreachable.
-  return apiRequest(API_ENDPOINTS.LOGOUT, { method: 'POST' }).catch(() => null);
+  return apiRequest(API_ENDPOINTS.LOGOUT, { method: 'POST', isAuthRequest: true }).catch(
+    () => null,
+  );
 }

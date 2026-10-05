@@ -5,6 +5,9 @@ export const APP_CONFIG = {
   REQUEST_TIMEOUT_MS: 15000,
   // Fake network delay so loading states are visible in mock mode.
   MOCK_DELAY_MS: 800,
+  DONORS_PAGE_SIZE: 5,
+  // Wait until the user stops typing before searching, instead of calling the API per keystroke.
+  SEARCH_DEBOUNCE_MS: 400,
 };
 
 export const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];

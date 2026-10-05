@@ -4,6 +4,8 @@ export const API_ENDPOINTS = {
   REGISTER: '/auth/register',
   REFRESH: '/auth/refresh',
   LOGOUT: '/auth/logout',
+  DONORS: '/donors',
+  DONOR_BY_ID: (id) => `/donors/${id}`,
 };
 
 export const HTTP_STATUS = {

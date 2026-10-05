@@ -13,6 +13,7 @@
   --color-error-bg: #fef2f2;
   --color-success: #15803d;
   --color-success-bg: #f0fdf4;
+  --color-backdrop: rgb(0 0 0 / 0.5);
 
   --font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
   --font-size-sm: 0.875rem;

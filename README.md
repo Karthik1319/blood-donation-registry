@@ -2,7 +2,8 @@
 
 React (Vite, JavaScript) frontend for the Blood Donation Registry.
 Scope so far: project structure, shared Page Layout (Header + Footer), Login and Registration forms with Zod
-validation, **API connection** for login/registration, secure token handling and RBAC groundwork.
+validation, API connection, secure token handling, **RBAC with protected/role-based routes**, and the
+**Donors list** (search, blood-group filter, pagination, Admin-only delete).
 The Spring Boot backend is not built yet. Set `VITE_USE_MOCK_API` to choose between the real API and the
 in-memory mock (see below).
 
@@ -34,10 +35,10 @@ npm run dev     # open http://localhost:5173
 
 `.env.development` (loaded by `npm run dev`) has the switch:
 
-| `VITE_USE_MOCK_API` | Behaviour                                                                                                                                                                                  |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `true` (default)    | No backend needed. Demo logins: `admin@blood.org` / `Admin@123`, `staff@blood.org` / `Staff@123`. Registered users last until reload; a reload logs you out (no real cookie in mock mode). |
-| `false`             | Calls Spring Boot. Start the backend on `http://localhost:8080`; Vite forwards `/api/*` to it. If it isn't running you'll see an error message on submit.                                  |
+| `VITE_USE_MOCK_API` | Behaviour                                                                                                                                                                                                                   |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `true` (default)    | No backend needed. Demo logins: `admin@blood.org` / `Admin@123`, `staff@blood.org` / `Staff@123`, `donor@blood.org` / `Donor@123`. Registered users last until reload; a reload logs you out (no real cookie in mock mode). |
+| `false`             | Calls Spring Boot. Start the backend on `http://localhost:8080`; Vite forwards `/api/*` to it. If it isn't running you'll see an error message on submit.                                                                   |
 
 Restart `npm run dev` after changing the file.
 
@@ -52,6 +53,10 @@ All paths are under `/api`. JSON in and out. Errors never need a body; the front
 | `POST /api/auth/refresh`  | none (refresh cookie sent automatically)           | `200 { accessToken, user }` + rotates cookie      | `401` → stay logged out                      |
 | `POST /api/auth/logout`   | none                                               | `204`, cookie cleared                             | ignored; the frontend logs out anyway        |
 
+| `GET /api/donors?page=0&size=5&search=&bloodGroup=` | none (Bearer token) | `200 { content: Donor[], totalElements, totalPages }` | `401` → refresh + retry once, `403` → no permission |
+| `DELETE /api/donors/{id}` | none (Bearer token, ADMIN only) | `204` | `403` no permission, `404` not found |
+
+`Donor` = `{ id, name, bloodGroup, phone }`. `page` starts at 0 (Spring Data style); empty filters are not sent.
 `user` = `{ fullName, email, role }` where `role` is `ADMIN`, `STAFF` or `DONOR`.
 Refresh cookie: `HttpOnly; Secure; SameSite=Strict; Path=/api/auth`.
 Any other failure maps to: `403` no permission, `404` not found, `5xx` generic error, no response → "Unable to reach the server".
@@ -93,24 +98,28 @@ src/
 │   ├── validation.js         # Regex patterns + PASSWORD_RULES
 │   ├── config.js             # App config (API URL, mock switch, timeout) + blood groups
 │   ├── api.js                # API endpoint paths + HTTP status codes
-│   └── roles.js              # Roles, permissions and which role has which permission
+│   ├── roles.js              # Roles, permissions, which role has which permission, route roles
+│   └── navigation.js         # Menu items and the permission each one needs
 ├── components/
 │   ├── ui/                   # Reusable, presentational only (no business logic, no text)
 │   │   ├── Button.jsx  Input.jsx  Select.jsx  FormField.jsx
 │   │   ├── Card.jsx  Alert.jsx  PasswordChecklist.jsx  LoadingMessage.jsx
-│   └── layout/               # Header, Footer, PageLayout
-├── features/auth/            # Login/Registration forms, Zod schemas, ProtectedRoute
-├── pages/                    # One component per route: LoginPage, RegisterPage, HomePage
+│   │   ├── AsyncContent.jsx  Pagination.jsx  ConfirmDialog.jsx
+│   └── layout/               # Header, UserNav (role-based menu + logout), Footer, PageLayout
+├── features/auth/            # Login/Registration forms, Zod schemas, ProtectedRoute, GuestRoute, RoleRoute
+├── features/donors/          # useDonors (fetch hook), DonorFilters, DonorTable, DeleteDonorDialog
+├── pages/                    # LoginPage, RegisterPage, DashboardPage, DonorListPage, AccessDeniedPage
 ├── services/                 # The ONLY place that talks to the API
 │   ├── apiClient.js          # fetch wrapper: base URL, Bearer token, timeout, safe error messages
 │   ├── authApi.js            # Real calls: login, register, refresh, logout
 │   ├── mockAuthApi.js        # Same functions, in-memory (VITE_USE_MOCK_API=true)
 │   ├── authService.js        # Picks authApi or mockAuthApi; components import from here
 │   ├── tokenStorage.js       # The ONLY place that reads/writes the access token (memory only)
-│   └── mockUsers.js          # Fake users for mock mode
-├── hooks/                    # useForm (form state + validation), useAuth (logged-in user)
+│   ├── donorApi.js / mockDonorApi.js / donorService.js   # Same pattern for donors
+│   └── mockUsers.js, mockDonors.js                       # Fake data for mock mode
+├── hooks/                    # useForm, useAuth, useDebouncedValue (search waits until typing stops)
 ├── context/                  # AuthContext + AuthProvider
-├── utils/                    # Small pure helpers (getFieldErrors, getErrorId, delay, hasPermission)
+├── utils/                    # Small pure helpers (getFieldErrors, getErrorId, delay, hasPermission, buildQueryString)
 ├── styles/                   # tokens.css (design tokens) + global.css (classes)
 └── test/setup.js             # Test setup (jest-dom matchers, cleanup)
 ```
@@ -127,6 +136,19 @@ src/
 
 Client-side validation is for user experience only; the Spring Boot API must validate everything again.
 
+## Routes and roles
+
+| Route                 | Who can open it                                | Guard                          |
+| --------------------- | ---------------------------------------------- | ------------------------------ |
+| `/login`, `/register` | Logged-out users only (others go to Dashboard) | `GuestRoute`                   |
+| `/` Dashboard         | Any logged-in user                             | `ProtectedRoute`               |
+| `/donors`             | ADMIN, STAFF (DONOR sees the 403 page)         | `ProtectedRoute` + `RoleRoute` |
+
+In the UI, the **Donors** menu item is hidden from DONOR, and the **Delete** button is shown to ADMIN only.
+Hiding things in the UI is UX, NOT security: the API must enforce the same rules.
+
+**Logout** calls `/auth/logout`, clears the in-memory token and user, and redirects to Login.
+
 ## How the API connection works
 
 1. A form calls `loginUser`/`registerUser` from `services/authService.js`. Components never call `fetch`.
@@ -134,7 +156,9 @@ Client-side validation is for user experience only; the Spring Boot API must val
 3. `apiClient.js` sends the request with the Bearer token, a 15 s timeout and `credentials: 'include'` (for the cookie).
 4. On failure it throws an `ApiError` with a user-safe message chosen by HTTP status (bad input vs not found vs
    server error vs offline). `useForm` shows that message in the form's `Alert`.
-5. On login, `AuthProvider` keeps the access token in memory and the user in state. On page reload it calls
+5. **Interceptor:** if a non-auth request returns 401 (expired access token), `apiClient` asks `AuthProvider` to
+   refresh the token once and retries. If the refresh fails, the user is logged out and sent to Login.
+6. On login, `AuthProvider` keeps the access token in memory and the user in state. On page reload it calls
    `/auth/refresh` to restore the session (see `docs/token-storage.md`).
 
 ## Next steps

@@ -20,7 +20,7 @@ function LoginForm() {
   const submitLogin = async (credentials) => {
     const session = await loginUser(credentials);
     login(session);
-    navigate(ROUTES.HOME);
+    navigate(ROUTES.DASHBOARD);
   };
 
   return (

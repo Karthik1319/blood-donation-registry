@@ -33,10 +33,44 @@ function toApiError(status, errorMessages) {
   return new ApiError(status, message);
 }
 
+let handleUnauthorized = null;
+
+/**
+ * AuthProvider registers here what to do when the server rejects the access token
+ * (try a refresh, otherwise log out). It must return true if a new token was obtained.
+ */
+export function setUnauthorizedHandler(handler) {
+  handleUnauthorized = handler;
+}
+
 async function readJson(response) {
   // Some endpoints (e.g. 201 Created, 204 No Content) return an empty body.
   const text = await response.text();
-  return text ? JSON.parse(text) : null;
+  try {
+    return text ? JSON.parse(text) : null;
+  } catch {
+    throw new ApiError(response.status, MESSAGES.GENERIC_ERROR);
+  }
+}
+
+async function sendRequest(path, method, body) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), APP_CONFIG.REQUEST_TIMEOUT_MS);
+  try {
+    return await fetch(`${APP_CONFIG.API_BASE_URL}${path}`, {
+      method,
+      headers: buildHeaders(),
+      body: body ? JSON.stringify(body) : undefined,
+      // Lets the browser send/receive the HttpOnly refresh-token cookie.
+      credentials: 'include',
+      signal: controller.signal,
+    });
+  } catch {
+    // fetch only rejects when the server can't be reached or the request timed out.
+    throw new ApiError(HTTP_STATUS.NETWORK_ERROR, MESSAGES.NETWORK_ERROR);
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 /**
@@ -48,30 +82,20 @@ async function readJson(response) {
  * @param {string} [options.method] - HTTP method.
  * @param {object} [options.body] - data sent as JSON.
  * @param {object} [options.errorMessages] - { status: message } overrides for this endpoint.
+ * @param {boolean} [options.isAuthRequest] - true for /auth/* calls, which must not trigger a refresh.
  */
-export async function apiRequest(path, { method = 'GET', body, errorMessages = {} } = {}) {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), APP_CONFIG.REQUEST_TIMEOUT_MS);
-  try {
-    const response = await fetch(`${APP_CONFIG.API_BASE_URL}${path}`, {
-      method,
-      headers: buildHeaders(),
-      body: body ? JSON.stringify(body) : undefined,
-      // Lets the browser send/receive the HttpOnly refresh-token cookie.
-      credentials: 'include',
-      signal: controller.signal,
-    });
-    if (!response.ok) {
-      throw toApiError(response.status, errorMessages);
-    }
-    return await readJson(response);
-  } catch (error) {
-    if (error instanceof ApiError) {
-      throw error;
-    }
-    // fetch only rejects when the server can't be reached or the request timed out.
-    throw new ApiError(HTTP_STATUS.NETWORK_ERROR, MESSAGES.NETWORK_ERROR);
-  } finally {
-    clearTimeout(timeoutId);
+export async function apiRequest(
+  path,
+  { method = 'GET', body, errorMessages = {}, isAuthRequest = false } = {},
+) {
+  let response = await sendRequest(path, method, body);
+  // Interceptor: an expired access token gets one silent refresh, then the request is retried.
+  const isTokenRejected = response.status === HTTP_STATUS.UNAUTHORIZED && !isAuthRequest;
+  if (isTokenRejected && handleUnauthorized && (await handleUnauthorized())) {
+    response = await sendRequest(path, method, body);
   }
+  if (!response.ok) {
+    throw toApiError(response.status, errorMessages);
+  }
+  return readJson(response);
 }

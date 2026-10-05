@@ -233,3 +233,135 @@ a {
   text-align: center;
   color: var(--color-text-muted);
 }
+
+/* ---------- Pages ---------- */
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.page__title {
+  margin: 0;
+  font-size: var(--font-size-xl);
+}
+
+.card .button {
+  display: inline-block;
+  text-decoration: none;
+}
+
+.header__user {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+/* ---------- Badge (text, so color is never the only signal) ---------- */
+.badge {
+  display: inline-block;
+  padding: 0 var(--space-sm);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-primary);
+  background: var(--color-error-bg);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius);
+}
+
+/* ---------- Filters ---------- */
+.filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--space-md);
+  padding: var(--space-md);
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+/* ---------- Table ---------- */
+.table-wrapper {
+  overflow-x: auto;
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: var(--space-sm) var(--space-md);
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.table th {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+/* ---------- Pagination ---------- */
+.pagination {
+  display: flex;
+  gap: var(--space-md);
+  align-items: center;
+  justify-content: center;
+  margin-top: var(--space-md);
+}
+
+/* ---------- Async states ---------- */
+.async-error {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  align-items: flex-start;
+}
+
+.empty-message {
+  padding: var(--space-xl);
+  text-align: center;
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  border-radius: var(--radius);
+}
+
+/* ---------- Danger button ---------- */
+.button--danger {
+  background: var(--color-surface);
+  color: var(--color-error);
+  border-color: var(--color-error);
+}
+
+.button--danger:hover:not(:disabled) {
+  background: var(--color-error-bg);
+}
+
+/* ---------- Dialog ---------- */
+.dialog {
+  width: min(28rem, calc(100% - 2 * var(--space-md)));
+  padding: var(--space-lg);
+  border: none;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.dialog::backdrop {
+  background: var(--color-backdrop);
+}
+
+.dialog__title {
+  margin: 0 0 var(--space-sm);
+  font-size: var(--font-size-lg);
+}
+
+.dialog__actions {
+  display: flex;
+  gap: var(--space-sm);
+  justify-content: flex-end;
+  margin-top: var(--space-md);
+}

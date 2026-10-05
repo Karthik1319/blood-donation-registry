@@ -11,6 +11,17 @@ export const ROLE_LABELS = {
   [ROLES.DONOR]: 'Donor',
 };
 
+export const ROLE_DESCRIPTIONS = {
+  [ROLES.ADMIN]: 'You can view, add, edit and delete donors and donations.',
+  [ROLES.STAFF]: 'You can view, add and edit donors and donations.',
+  [ROLES.DONOR]: 'Your profile and donation history will appear here soon.',
+};
+
+// Roles allowed to open each restricted page (used by RoleRoute in App.jsx).
+export const ROUTE_ROLES = {
+  DONORS: [ROLES.ADMIN, ROLES.STAFF],
+};
+
 export const PERMISSIONS = {
   DONOR_VIEW_ALL: 'donor:view-all',
   DONOR_CREATE: 'donor:create',

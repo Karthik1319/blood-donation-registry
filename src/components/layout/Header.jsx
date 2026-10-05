@@ -1,41 +1,30 @@
 import { Link, NavLink } from 'react-router';
-import Button from '@/components/ui/Button';
+import UserNav from '@/components/layout/UserNav';
 import { LABELS } from '@/constants/labels';
-import { ROLE_LABELS } from '@/constants/roles';
 import { ROUTES } from '@/constants/routes';
 import { useAuth } from '@/hooks/useAuth';
 
 function Header() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
 
   return (
     <header className="header">
       <div className="header__inner">
-        <Link to={ROUTES.HOME} className="header__brand">
+        <Link to={ROUTES.DASHBOARD} className="header__brand">
           {LABELS.APP_NAME}
         </Link>
-        <nav className="header__nav" aria-label="Main">
-          {/* Hiding links is UX, NOT security; the API must enforce every rule. */}
-          {user ? (
-            <>
-              <span>
-                {user.fullName} ({ROLE_LABELS[user.role]})
-              </span>
-              <Button variant="secondary" onClick={logout}>
-                {LABELS.NAV_LOGOUT}
-              </Button>
-            </>
-          ) : (
-            <>
-              <NavLink to={ROUTES.LOGIN} className="header__link">
-                {LABELS.NAV_LOGIN}
-              </NavLink>
-              <NavLink to={ROUTES.REGISTER} className="header__link">
-                {LABELS.NAV_REGISTER}
-              </NavLink>
-            </>
-          )}
-        </nav>
+        {user ? (
+          <UserNav />
+        ) : (
+          <nav className="header__nav" aria-label={LABELS.MAIN_NAV}>
+            <NavLink to={ROUTES.LOGIN} className="header__link">
+              {LABELS.NAV_LOGIN}
+            </NavLink>
+            <NavLink to={ROUTES.REGISTER} className="header__link">
+              {LABELS.NAV_REGISTER}
+            </NavLink>
+          </nav>
+        )}
       </div>
     </header>
   );

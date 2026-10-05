@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { HTTP_STATUS } from '@/constants/api';
 import { MESSAGES } from '@/constants/messages';
-import { apiRequest } from '@/services/apiClient';
+import { apiRequest, setUnauthorizedHandler } from '@/services/apiClient';
 import { clearAccessToken, setAccessToken } from '@/services/tokenStorage';
 
 const mockFetchResponse = (status, body = '') =>
@@ -15,7 +15,10 @@ const mockFetchResponse = (status, body = '') =>
   );
 
 describe('apiRequest', () => {
-  afterEach(clearAccessToken);
+  afterEach(() => {
+    clearAccessToken();
+    setUnauthorizedHandler(null);
+  });
 
   it('returns the parsed JSON body on success', async () => {
     mockFetchResponse(200, '{"name":"Ravi"}');
@@ -54,6 +57,43 @@ describe('apiRequest', () => {
     await expect(apiRequest('/x')).rejects.toMatchObject({
       status: HTTP_STATUS.NETWORK_ERROR,
       message: MESSAGES.NETWORK_ERROR,
+    });
+  });
+
+  describe('401 interceptor', () => {
+    const response = (status, body = '') => ({
+      ok: status >= 200 && status < 300,
+      status,
+      text: async () => body,
+    });
+
+    it('refreshes the token once and retries the request', async () => {
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce(response(HTTP_STATUS.UNAUTHORIZED))
+        .mockResolvedValueOnce(response(200, '{"ok":true}'));
+      vi.stubGlobal('fetch', fetchMock);
+      const refresh = vi.fn().mockResolvedValue(true);
+      setUnauthorizedHandler(refresh);
+
+      await expect(apiRequest('/donors')).resolves.toEqual({ ok: true });
+      expect(refresh).toHaveBeenCalledTimes(1);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('gives up with "session expired" when the refresh fails', async () => {
+      mockFetchResponse(HTTP_STATUS.UNAUTHORIZED);
+      setUnauthorizedHandler(vi.fn().mockResolvedValue(false));
+      await expect(apiRequest('/donors')).rejects.toThrow(MESSAGES.SESSION_EXPIRED);
+      expect(fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('never refreshes for auth requests such as login', async () => {
+      mockFetchResponse(HTTP_STATUS.UNAUTHORIZED);
+      const refresh = vi.fn();
+      setUnauthorizedHandler(refresh);
+      await expect(apiRequest('/auth/login', { isAuthRequest: true })).rejects.toThrow();
+      expect(refresh).not.toHaveBeenCalled();
     });
   });
 });

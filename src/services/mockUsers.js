@@ -19,4 +19,12 @@ export const MOCK_USERS = [
     password: 'Staff@123',
     role: ROLES.STAFF,
   },
+  {
+    fullName: 'Demo Donor',
+    email: 'donor@blood.org',
+    phone: '9876543212',
+    bloodGroup: 'B+',
+    password: 'Donor@123',
+    role: ROLES.DONOR,
+  },
 ];
