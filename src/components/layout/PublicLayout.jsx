@@ -1,12 +1,12 @@
 import { Outlet } from 'react-router';
 import Footer from '@/components/layout/Footer';
-import Header from '@/components/layout/Header';
+import PublicHeader from '@/components/layout/PublicHeader';
 
-/** Shared frame for every page: Header on top, the current page in the middle, Footer below. */
-function PageLayout() {
+/** Frame for logged-out pages (Login, Register): simple header, the page, footer. */
+function PublicLayout() {
   return (
     <div className="layout">
-      <Header />
+      <PublicHeader />
       <main className="layout__main">
         <Outlet />
       </main>
@@ -15,4 +15,4 @@ function PageLayout() {
   );
 }
 
-export default PageLayout;
+export default PublicLayout;

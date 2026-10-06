@@ -1,9 +1,11 @@
 import { ROLES } from '@/constants/roles';
 
-// Fake "database" for mock mode only (VITE_USE_MOCK_API=true).
+// Fake "users table" for mock mode only (VITE_USE_MOCK_API=true), shared by mockAuthApi
+// (login/register) and mockUserApi (users list). Not a constant: registering adds to it.
 // A real backend stores only hashed passwords; this file is deleted once the API is live.
-export const MOCK_USERS = [
+export const mockUsers = [
   {
+    id: 1,
     fullName: 'Demo Admin',
     email: 'admin@blood.org',
     phone: '9876543210',
@@ -12,6 +14,7 @@ export const MOCK_USERS = [
     role: ROLES.ADMIN,
   },
   {
+    id: 2,
     fullName: 'Demo Staff',
     email: 'staff@blood.org',
     phone: '9876543211',
@@ -20,6 +23,7 @@ export const MOCK_USERS = [
     role: ROLES.STAFF,
   },
   {
+    id: 3,
     fullName: 'Demo Donor',
     email: 'donor@blood.org',
     phone: '9876543212',

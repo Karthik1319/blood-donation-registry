@@ -1,16 +1,16 @@
 import { Link } from 'react-router';
-import Card from '@/components/ui/Card';
+import PageHeader from '@/components/ui/PageHeader';
 import { LABELS } from '@/constants/labels';
 import { ROUTES } from '@/constants/routes';
 
 function AccessDeniedPage() {
   return (
-    <Card title={LABELS.ACCESS_DENIED_TITLE}>
-      <p>{LABELS.ACCESS_DENIED_TEXT}</p>
+    <section className="page">
+      <PageHeader title={LABELS.ACCESS_DENIED_TITLE} subtitle={LABELS.ACCESS_DENIED_TEXT} />
       <Link to={ROUTES.DASHBOARD} className="button button--primary">
         {LABELS.BACK_TO_DASHBOARD}
       </Link>
-    </Card>
+    </section>
   );
 }
 

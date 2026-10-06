@@ -8,6 +8,7 @@ export const APP_CONFIG = {
   DONORS_PAGE_SIZE: 5,
   // Wait until the user stops typing before searching, instead of calling the API per keystroke.
   SEARCH_DEBOUNCE_MS: 400,
+  DATE_LOCALE: 'en-IN',
 };
 
 export const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];

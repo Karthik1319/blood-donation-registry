@@ -1,6 +1,8 @@
 import PropTypes from 'prop-types';
+import { Link } from 'react-router';
 import Button from '@/components/ui/Button';
 import { LABELS } from '@/constants/labels';
+import { getDonorDetailsPath } from '@/constants/routes';
 
 /**
  * Table of donors. The Actions column only exists when the user may delete.
@@ -24,7 +26,9 @@ function DonorTable({ donors, canDelete, onDeleteClick }) {
         <tbody>
           {donors.map((donor) => (
             <tr key={donor.id}>
-              <td>{donor.name}</td>
+              <td>
+                <Link to={getDonorDetailsPath(donor.id)}>{donor.name}</Link>
+              </td>
               <td>
                 <span className="badge">{donor.bloodGroup}</span>
               </td>

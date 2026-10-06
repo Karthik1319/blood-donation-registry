@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import Alert from '@/components/ui/Alert';
 import AsyncContent from '@/components/ui/AsyncContent';
+import PageHeader from '@/components/ui/PageHeader';
 import Pagination from '@/components/ui/Pagination';
 import { APP_CONFIG } from '@/constants/config';
 import { LABELS } from '@/constants/labels';
+import { BREADCRUMBS } from '@/constants/navigation';
 import { PERMISSIONS } from '@/constants/roles';
 import DeleteDonorDialog from '@/features/donors/DeleteDonorDialog';
 import DonorFilters from '@/features/donors/DonorFilters';
@@ -49,7 +51,11 @@ function DonorListPage() {
 
   return (
     <section className="page">
-      <h1 className="page__title">{LABELS.DONORS_TITLE}</h1>
+      <PageHeader
+        title={LABELS.DONORS_TITLE}
+        breadcrumbs={[BREADCRUMBS.DASHBOARD]}
+        breadcrumbLabel={LABELS.BREADCRUMB}
+      />
       <DonorFilters filters={filters} onChange={changeFilter} />
       <Alert message={successMessage} variant="success" />
       <AsyncContent

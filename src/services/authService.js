@@ -1,8 +1,9 @@
-import { APP_CONFIG } from '@/constants/config';
 import * as authApi from '@/services/authApi';
 import * as mockAuthApi from '@/services/mockAuthApi';
+import { selectApi } from '@/utils/selectApi';
 
-// Picks the real or the mock API once, so components never know (or care) which one is used.
-const selectedApi = APP_CONFIG.USE_MOCK_API ? mockAuthApi : authApi;
-
-export const { loginUser, registerUser, refreshSession, logoutUser } = selectedApi;
+// Components import from here, so they never know (or care) whether the mock is used.
+export const { loginUser, registerUser, refreshSession, logoutUser } = selectApi(
+  authApi,
+  mockAuthApi,
+);

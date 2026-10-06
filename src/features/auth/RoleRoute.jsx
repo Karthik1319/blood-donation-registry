@@ -2,17 +2,18 @@ import PropTypes from 'prop-types';
 import { Outlet } from 'react-router';
 import { useAuth } from '@/hooks/useAuth';
 import AccessDeniedPage from '@/pages/AccessDeniedPage';
+import { hasRole } from '@/utils/hasRole';
 
 /**
  * Parent route that only lets the given roles through; others see the 403 page.
  * Must be placed inside ProtectedRoute, so a user is always logged in here.
  * This is UX, NOT security: the API must check the role on every request.
  * @param {object} props
- * @param {string[]} props.allowedRoles - roles from ROLES that may open the child pages.
+ * @param {string[]} props.allowedRoles - roles that may open the child pages (from ROUTE_ROLES).
  */
 function RoleRoute({ allowedRoles }) {
   const { user } = useAuth();
-  return allowedRoles.includes(user.role) ? <Outlet /> : <AccessDeniedPage />;
+  return hasRole(user, allowedRoles) ? <Outlet /> : <AccessDeniedPage />;
 }
 
 RoleRoute.propTypes = {

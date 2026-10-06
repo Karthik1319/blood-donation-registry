@@ -67,14 +67,14 @@ public List<DonationDto> getDonationsForDonor(Long donorId) { ... }
 Hiding a button only means the user doesn't see it. They can still call the API directly, so the backend
 must check every rule.
 
-| Where                                                                       | Status   | What it does                                                                                  |
-| --------------------------------------------------------------------------- | -------- | --------------------------------------------------------------------------------------------- |
-| `src/constants/roles.js`                                                    | ✅ Added | `ROLES`, `ROLE_LABELS`, `PERMISSIONS`, `ROLE_PERMISSIONS`                                     |
-| `src/utils/hasPermission.js`                                                | ✅ Added | `hasPermission(user, PERMISSIONS.DONOR_DELETE)` → show/hide buttons                           |
-| `src/features/auth/ProtectedRoute.jsx` / `RoleRoute.jsx` / `GuestRoute.jsx` | ✅ Added | Login required / role required (403 page) / logged-in users kept away from Login              |
-| `src/components/layout/Header.jsx`                                          | ✅ Added | Shows the role as text next to the user's name                                                |
-| `src/pages/DonorListPage.jsx` + `UserNav.jsx`                               | ✅ Added | Donors route is ADMIN/STAFF only; Delete button ADMIN only; menu items filtered by permission |
-| `apiClient.js` 403 handling                                                 | ✅ Added | Shows "You do not have permission…" when the backend refuses                                  |
+| Where                                                                       | Status   | What it does                                                                                                                |
+| --------------------------------------------------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `src/constants/roles.js`                                                    | ✅ Added | `ROLES`, `ROLE_LABELS`, `PERMISSIONS`, `ROLE_PERMISSIONS`                                                                   |
+| `src/utils/hasPermission.js`                                                | ✅ Added | `hasPermission(user, PERMISSIONS.DONOR_DELETE)` → show/hide buttons                                                         |
+| `src/features/auth/ProtectedRoute.jsx` / `RoleRoute.jsx` / `GuestRoute.jsx` | ✅ Added | Login required / role required (403 page) / logged-in users kept away from Login                                            |
+| `src/components/layout/Header.jsx`                                          | ✅ Added | Shows the role as text next to the user's name                                                                              |
+| `src/pages/DonorListPage.jsx` + `Sidebar.jsx`                               | ✅ Added | Donors route is ADMIN/STAFF only; Delete button ADMIN only; sidebar items filtered by `ROUTE_ROLES`; `/users` is ADMIN only |
+| `apiClient.js` 403 handling                                                 | ✅ Added | Shows "You do not have permission…" when the backend refuses                                                                |
 
 Example of how future code will use it:
 

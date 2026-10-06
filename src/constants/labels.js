@@ -1,6 +1,8 @@
+const APP_NAME = 'Blood Donation Registry';
+
 export const LABELS = {
-  APP_NAME: 'Blood Donation Registry',
-  FOOTER_TEXT: 'Blood Donation Registry. Every drop counts.',
+  APP_NAME,
+  FOOTER_TEXT: `${APP_NAME}. Every drop counts.`,
 
   NAV_LOGIN: 'Login',
   NAV_REGISTER: 'Register',
@@ -8,7 +10,12 @@ export const LABELS = {
   NAV_LOGGING_OUT: 'Logging out...',
   NAV_DASHBOARD: 'Dashboard',
   NAV_DONORS: 'Donors',
+  NAV_USERS: 'Users',
   MAIN_NAV: 'Main',
+  OPEN_MENU: 'Open menu',
+  CLOSE_MENU: 'Close menu',
+  MENU_ICON: '☰',
+  BREADCRUMB: 'Breadcrumb',
 
   LOGIN_TITLE: 'Login',
   LOGIN_SUBTITLE: 'Sign in to manage donors and donations',
@@ -28,8 +35,10 @@ export const LABELS = {
   ACCESS_DENIED_TITLE: '403 - Access denied',
   ACCESS_DENIED_TEXT: 'Your role does not allow you to open this page.',
   BACK_TO_DASHBOARD: 'Back to dashboard',
+  documentTitle: (pageTitle) => `${pageTitle} | ${APP_NAME}`,
 
-  DASHBOARD_TITLE: 'Welcome',
+  DASHBOARD_TITLE: 'Dashboard',
+  WELCOME: 'Welcome',
   YOUR_ROLE: 'Your role:',
   GO_TO_DONORS: 'View donors',
 
@@ -42,6 +51,20 @@ export const LABELS = {
   COLUMN_BLOOD_GROUP: 'Blood group',
   COLUMN_PHONE: 'Phone',
   COLUMN_ACTIONS: 'Actions',
+  COLUMN_EMAIL: 'Email',
+  COLUMN_ROLE: 'Role',
+  COLUMN_DATE: 'Date',
+  COLUMN_QUANTITY: 'Quantity',
+  COLUMN_LOCATION: 'Location',
+
+  DONOR_DETAILS_TITLE: 'Donor details',
+  DONATIONS_TITLE: 'Donation history',
+  NO_DONATIONS: 'This donor has no donations yet.',
+  quantityInMl: (quantity) => `${quantity} ml`,
+
+  USERS_TITLE: 'Users',
+  USERS_SUBTITLE: 'All accounts that can sign in. Visible to Admin only.',
+  NO_USERS: 'No users found.',
   DELETE: 'Delete',
   DELETING: 'Deleting...',
   DELETE_DONOR_TITLE: 'Delete donor?',

@@ -14,6 +14,9 @@
   --color-success: #15803d;
   --color-success-bg: #f0fdf4;
   --color-backdrop: rgb(0 0 0 / 0.5);
+  --color-sidebar-bg: #7f1d1d;
+  --color-sidebar-hover: rgb(255 255 255 / 0.1);
+  --color-sidebar-active: rgb(255 255 255 / 0.2);
 
   --font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
   --font-size-sm: 0.875rem;
@@ -31,4 +34,5 @@
   --shadow: 0 1px 3px rgb(0 0 0 / 0.1), 0 1px 2px rgb(0 0 0 / 0.06);
   --card-max-width: 28rem;
   --content-max-width: 72rem;
+  --sidebar-width: 15rem;
 }

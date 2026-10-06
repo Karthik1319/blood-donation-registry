@@ -6,6 +6,8 @@ export const API_ENDPOINTS = {
   LOGOUT: '/auth/logout',
   DONORS: '/donors',
   DONOR_BY_ID: (id) => `/donors/${id}`,
+  DONOR_DONATIONS: (id) => `/donors/${id}/donations`,
+  USERS: '/users',
 };
 
 export const HTTP_STATUS = {

@@ -3,13 +3,11 @@ import { APP_CONFIG } from '@/constants/config';
 import { MESSAGES } from '@/constants/messages';
 import { ROLES } from '@/constants/roles';
 import { ApiError } from '@/services/apiClient';
-import { MOCK_USERS } from '@/services/mockUsers';
+import { mockUsers } from '@/services/mockUsers';
 import { delay } from '@/utils/delay';
 
 // Same functions and response shapes as authApi.js, but backed by an in-memory list.
 // Only used when VITE_USE_MOCK_API=true, so the UI can be developed without the backend.
-
-const registeredUsers = [...MOCK_USERS];
 
 function isSameEmail(first, second) {
   return first.toLowerCase() === second.toLowerCase();
@@ -17,7 +15,7 @@ function isSameEmail(first, second) {
 
 export async function loginUser({ email, password }) {
   await delay(APP_CONFIG.MOCK_DELAY_MS);
-  const user = registeredUsers.find((u) => isSameEmail(u.email, email) && u.password === password);
+  const user = mockUsers.find((u) => isSameEmail(u.email, email) && u.password === password);
   if (!user) {
     throw new ApiError(HTTP_STATUS.UNAUTHORIZED, MESSAGES.LOGIN_FAILED);
   }
@@ -29,10 +27,11 @@ export async function loginUser({ email, password }) {
 
 export async function registerUser({ fullName, email, phone, bloodGroup, password }) {
   await delay(APP_CONFIG.MOCK_DELAY_MS);
-  if (registeredUsers.some((u) => isSameEmail(u.email, email))) {
+  if (mockUsers.some((u) => isSameEmail(u.email, email))) {
     throw new ApiError(HTTP_STATUS.CONFLICT, MESSAGES.EMAIL_TAKEN);
   }
-  registeredUsers.push({ fullName, email, phone, bloodGroup, password, role: ROLES.DONOR });
+  const id = mockUsers.length + 1;
+  mockUsers.push({ id, fullName, email, phone, bloodGroup, password, role: ROLES.DONOR });
   return null;
 }
 

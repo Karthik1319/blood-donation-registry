@@ -2,6 +2,7 @@ import { HTTP_STATUS } from '@/constants/api';
 import { APP_CONFIG } from '@/constants/config';
 import { MESSAGES } from '@/constants/messages';
 import { ApiError } from '@/services/apiClient';
+import { MOCK_DONATIONS } from '@/services/mockDonations';
 import { MOCK_DONORS } from '@/services/mockDonors';
 import { delay } from '@/utils/delay';
 
@@ -28,11 +29,28 @@ export async function getDonors({ page, size, search, bloodGroup }) {
   };
 }
 
-export async function deleteDonor(id) {
-  await delay(APP_CONFIG.MOCK_DELAY_MS);
-  if (!donors.some((donor) => donor.id === id)) {
+function findDonor(id) {
+  const donor = donors.find((d) => d.id === Number(id));
+  if (!donor) {
     throw new ApiError(HTTP_STATUS.NOT_FOUND, MESSAGES.NOT_FOUND);
   }
-  donors = donors.filter((donor) => donor.id !== id);
+  return donor;
+}
+
+export async function getDonorById(id) {
+  await delay(APP_CONFIG.MOCK_DELAY_MS);
+  return findDonor(id);
+}
+
+export async function getDonorDonations(id) {
+  await delay(APP_CONFIG.MOCK_DELAY_MS);
+  findDonor(id);
+  return MOCK_DONATIONS[id] ?? [];
+}
+
+export async function deleteDonor(id) {
+  await delay(APP_CONFIG.MOCK_DELAY_MS);
+  findDonor(id);
+  donors = donors.filter((donor) => donor.id !== Number(id));
   return null;
 }

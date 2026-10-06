@@ -17,9 +17,12 @@ export const ROLE_DESCRIPTIONS = {
   [ROLES.DONOR]: 'Your profile and donation history will appear here soon.',
 };
 
-// Roles allowed to open each restricted page (used by RoleRoute in App.jsx).
+// Roles allowed to open each restricted page.
+// Single source of truth: App.jsx (RoleRoute) and the sidebar menu both read this,
+// so a page and its menu item can never disagree about who may see them.
 export const ROUTE_ROLES = {
   DONORS: [ROLES.ADMIN, ROLES.STAFF],
+  USERS: [ROLES.ADMIN],
 };
 
 export const PERMISSIONS = {
