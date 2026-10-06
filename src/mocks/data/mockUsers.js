@@ -1,8 +1,7 @@
 import { ROLES } from '@/constants/roles';
 
-// Fake "users table" for mock mode only (VITE_USE_MOCK_API=true), shared by mockAuthApi
-// (login/register) and mockUserApi (users list). Not a constant: registering adds to it.
-// A real backend stores only hashed passwords; this file is deleted once the API is live.
+// Fake "users table" for mock mode only. Not a constant: registering adds to it.
+// A real backend stores only hashed passwords.
 export const mockUsers = [
   {
     id: 1,

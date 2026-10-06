@@ -1,9 +1,11 @@
+import axios from 'axios';
 import { HTTP_STATUS } from '@/constants/api';
 import { APP_CONFIG } from '@/constants/config';
 import { MESSAGES } from '@/constants/messages';
 import { getAccessToken } from '@/services/tokenStorage';
 
 const DEFAULT_ERROR_MESSAGES = {
+  [HTTP_STATUS.NETWORK_ERROR]: MESSAGES.NETWORK_ERROR,
   [HTTP_STATUS.BAD_REQUEST]: MESSAGES.BAD_REQUEST,
   [HTTP_STATUS.UNAUTHORIZED]: MESSAGES.SESSION_EXPIRED,
   [HTTP_STATUS.FORBIDDEN]: MESSAGES.FORBIDDEN,
@@ -19,19 +21,14 @@ export class ApiError extends Error {
   }
 }
 
-function buildHeaders() {
-  const headers = { 'Content-Type': 'application/json' };
-  const token = getAccessToken();
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
-  return headers;
-}
-
-function toApiError(status, errorMessages) {
-  const message = errorMessages[status] ?? DEFAULT_ERROR_MESSAGES[status] ?? MESSAGES.GENERIC_ERROR;
-  return new ApiError(status, message);
-}
+/** The one Axios instance every service uses. */
+export const apiClient = axios.create({
+  baseURL: APP_CONFIG.API_BASE_URL,
+  timeout: APP_CONFIG.REQUEST_TIMEOUT_MS,
+  headers: { 'Content-Type': 'application/json' },
+  // Lets the browser send/receive the HttpOnly refresh-token cookie.
+  withCredentials: true,
+});
 
 let handleUnauthorized = null;
 
@@ -43,59 +40,58 @@ export function setUnauthorizedHandler(handler) {
   handleUnauthorized = handler;
 }
 
-async function readJson(response) {
-  // Some endpoints (e.g. 201 Created, 204 No Content) return an empty body.
-  const text = await response.text();
-  try {
-    return text ? JSON.parse(text) : null;
-  } catch {
-    throw new ApiError(response.status, MESSAGES.GENERIC_ERROR);
+function attachToken(config) {
+  const token = getAccessToken();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
+  return config;
 }
 
-async function sendRequest(path, method, body) {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), APP_CONFIG.REQUEST_TIMEOUT_MS);
-  try {
-    return await fetch(`${APP_CONFIG.API_BASE_URL}${path}`, {
-      method,
-      headers: buildHeaders(),
-      body: body ? JSON.stringify(body) : undefined,
-      // Lets the browser send/receive the HttpOnly refresh-token cookie.
-      credentials: 'include',
-      signal: controller.signal,
-    });
-  } catch {
-    // fetch only rejects when the server can't be reached or the request timed out.
-    throw new ApiError(HTTP_STATUS.NETWORK_ERROR, MESSAGES.NETWORK_ERROR);
-  } finally {
-    clearTimeout(timeoutId);
+async function handleResponseError(error) {
+  const { config, response } = error;
+  // No response at all means offline, server down or timeout.
+  const status = response?.status ?? HTTP_STATUS.NETWORK_ERROR;
+  // Expired/invalid access token: refresh once, then repeat the original request.
+  // Never for /auth/* calls (a wrong password is also 401) and never twice (no endless loop).
+  const canRefresh =
+    status === HTTP_STATUS.UNAUTHORIZED && !config?.isAuthRequest && !config?.isRetry;
+  if (canRefresh && handleUnauthorized && (await handleUnauthorized())) {
+    return apiClient({ ...config, isRetry: true });
   }
+  // The server's error body is never shown, so stack traces or internals can't leak to the screen.
+  const message =
+    config?.errorMessages?.[status] ?? DEFAULT_ERROR_MESSAGES[status] ?? MESSAGES.GENERIC_ERROR;
+  throw new ApiError(status, message);
 }
+
+// Request interceptor: attaches the token to every outgoing request.
+apiClient.interceptors.request.use(attachToken);
+// Response interceptor: handles 401 and turns every failure into an ApiError, in one place.
+apiClient.interceptors.response.use((response) => response, handleResponseError);
 
 /**
- * Sends a JSON request to the backend and returns the parsed response body.
- * Throws ApiError on failure. The server's error body is never shown to the user,
- * so stack traces or internal details cannot leak onto the screen.
+ * Sends a request through apiClient and returns only the response body (null when empty).
+ * Throws ApiError on failure.
  * @param {string} path - endpoint from API_ENDPOINTS.
  * @param {object} [options]
  * @param {string} [options.method] - HTTP method.
  * @param {object} [options.body] - data sent as JSON.
+ * @param {object} [options.params] - query string values, e.g. { page: 0 }.
  * @param {object} [options.errorMessages] - { status: message } overrides for this endpoint.
  * @param {boolean} [options.isAuthRequest] - true for /auth/* calls, which must not trigger a refresh.
  */
 export async function apiRequest(
   path,
-  { method = 'GET', body, errorMessages = {}, isAuthRequest = false } = {},
+  { method = 'GET', body, params, errorMessages = {}, isAuthRequest = false } = {},
 ) {
-  let response = await sendRequest(path, method, body);
-  // Interceptor: an expired access token gets one silent refresh, then the request is retried.
-  const isTokenRejected = response.status === HTTP_STATUS.UNAUTHORIZED && !isAuthRequest;
-  if (isTokenRejected && handleUnauthorized && (await handleUnauthorized())) {
-    response = await sendRequest(path, method, body);
-  }
-  if (!response.ok) {
-    throw toApiError(response.status, errorMessages);
-  }
-  return readJson(response);
+  const response = await apiClient.request({
+    url: path,
+    method,
+    data: body,
+    params,
+    errorMessages,
+    isAuthRequest,
+  });
+  return response.data || null;
 }

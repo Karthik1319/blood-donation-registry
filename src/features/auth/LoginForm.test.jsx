@@ -1,21 +1,18 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
-import { describe, expect, it, vi } from 'vitest';
+import MockAdapter from 'axios-mock-adapter';
+import { describe, expect, it } from 'vitest';
 import { HTTP_STATUS } from '@/constants/api';
 import { LABELS } from '@/constants/labels';
 import { MESSAGES } from '@/constants/messages';
 import AuthProvider from '@/context/AuthProvider';
 import LoginForm from '@/features/auth/LoginForm';
+import { apiClient } from '@/services/apiClient';
 
 // Simulates the Spring Boot API answering 401 to every request.
 const mockUnauthorizedApi = () =>
-  vi.stubGlobal(
-    'fetch',
-    vi
-      .fn()
-      .mockResolvedValue({ ok: false, status: HTTP_STATUS.UNAUTHORIZED, text: async () => '' }),
-  );
+  new MockAdapter(apiClient).onAny().reply(HTTP_STATUS.UNAUTHORIZED);
 
 const renderLoginForm = () =>
   render(

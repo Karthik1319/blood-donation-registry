@@ -1,6 +1,7 @@
-import * as mockUserApi from '@/services/mockUserApi';
-import * as userApi from '@/services/userApi';
-import { selectApi } from '@/utils/selectApi';
+import { API_ENDPOINTS } from '@/constants/api';
+import { apiRequest } from '@/services/apiClient';
 
-// Components import from here, so they never know (or care) whether the mock is used.
-export const { getUsers } = selectApi(userApi, mockUserApi);
+/** GET /users → [{ id, fullName, email, role }]. The server returns 403 unless the user is ADMIN. */
+export function getUsers() {
+  return apiRequest(API_ENDPOINTS.USERS);
+}

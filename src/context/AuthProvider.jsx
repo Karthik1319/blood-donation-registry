@@ -27,7 +27,7 @@ async function tryRefreshSession(setUser) {
 }
 
 /**
- * Provides { user, isRestoring, login, logout } to the whole app.
+ * Provides { user, isRestoring, isSessionExpired, login, logout } to the whole app.
  * @param {object} props
  * @param {React.ReactNode} props.children - the app.
  */
@@ -35,6 +35,8 @@ function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   // true until we know whether the refresh cookie still holds a valid session.
   const [isRestoring, setIsRestoring] = useState(true);
+  // true when the user was logged out because the session ran out (shown on the Login page).
+  const [isSessionExpired, setIsSessionExpired] = useState(false);
 
   useEffect(() => {
     let isActive = true;
@@ -44,16 +46,23 @@ function AuthProvider({ children }) {
         setIsRestoring(false);
       }
     });
-    // When any API call gets 401, apiClient calls this; if the refresh fails the user is logged
-    // out, and ProtectedRoute sends them to the login page.
-    setUnauthorizedHandler(() => tryRefreshSession(setUser));
+    // When any API call gets 401, apiClient's interceptor calls this. If the refresh fails the
+    // user is logged out, and ProtectedRoute sends them to the login page.
+    setUnauthorizedHandler(async () => {
+      const isRefreshed = await tryRefreshSession(setUser);
+      setIsSessionExpired(!isRefreshed);
+      return isRefreshed;
+    });
     return () => {
       isActive = false;
       setUnauthorizedHandler(null);
     };
   }, []);
 
-  const login = (session) => startSession(session, setUser);
+  const login = (session) => {
+    setIsSessionExpired(false);
+    startSession(session, setUser);
+  };
 
   const logout = async () => {
     await logoutUser();
@@ -61,7 +70,7 @@ function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isRestoring, login, logout }}>
+    <AuthContext.Provider value={{ user, isRestoring, isSessionExpired, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -13,6 +13,8 @@ export const API_ENDPOINTS = {
 export const HTTP_STATUS = {
   // Not a real HTTP code: used when the server could not be reached at all (offline, timeout).
   NETWORK_ERROR: 0,
+  OK: 200,
+  CREATED: 201,
   NO_CONTENT: 204,
   BAD_REQUEST: 400,
   UNAUTHORIZED: 401,

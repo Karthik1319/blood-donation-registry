@@ -51,11 +51,12 @@ who can then use the token from their own machine until it expires.
 - Hash passwords with BCrypt; rate-limit / lock out repeated failed logins.
 - Re-check role and ownership on **every** request (see `rbac.md`).
 
-## Known next step (not built yet)
+## Expired or invalid tokens (built)
 
-When an access token expires mid-session, the API returns 401. Later, `apiClient.js` should call
-`/auth/refresh` once and retry the request automatically. Today there are no protected API calls yet, so this is
-not needed for Login/Registration.
+The Axios response interceptor in `src/services/apiClient.js` handles this in one place: a 401 from a normal
+request triggers one `/auth/refresh` and a retry. If the refresh also fails (session over, token revoked),
+the user is logged out and the Login page says "Your session has expired". In mock mode the fake backend makes
+access tokens expire after 1 minute and ends idle sessions after 3 minutes, so both paths can be demonstrated.
 
 ## Limits to be honest about
 

@@ -5,8 +5,8 @@ Scope so far: project structure, shared Page Layout (Header + Footer), Login and
 validation, API connection, secure token handling, **RBAC with protected/role-based routes**, and the
 **Donors list** (search, blood-group filter, pagination, Admin-only delete), a **dashboard layout** with a
 role-based sidebar, **Donor details** (with donation history) and an Admin-only **Users** page.
-The Spring Boot backend is not built yet. Set `VITE_USE_MOCK_API` to choose between the real API and the
-in-memory mock (see below).
+The Spring Boot backend is not built yet. Set `VITE_USE_MOCK_API` to choose between the real API and a fake
+backend that runs in the browser (see below).
 
 Research notes: [`docs/token-storage.md`](docs/token-storage.md) (where to keep the token) and
 [`docs/rbac.md`](docs/rbac.md) (roles and where they are enforced).
@@ -36,12 +36,16 @@ npm run dev     # open http://localhost:5173
 
 `.env.development` (loaded by `npm run dev`) has the switch:
 
-| `VITE_USE_MOCK_API` | Behaviour                                                                                                                                                                                                                   |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `true` (default)    | No backend needed. Demo logins: `admin@blood.org` / `Admin@123`, `staff@blood.org` / `Staff@123`, `donor@blood.org` / `Donor@123`. Registered users last until reload; a reload logs you out (no real cookie in mock mode). |
-| `false`             | Calls Spring Boot. Start the backend on `http://localhost:8080`; Vite forwards `/api/*` to it. If it isn't running you'll see an error message on submit.                                                                   |
+| `VITE_USE_MOCK_API` | Behaviour                                                                                                                                                                                                                                                                                                               |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `true` (default)    | No backend needed: `src/mocks/` answers the Axios requests in the browser, so interceptors, tokens, 401 and 403 work exactly as with the real API. Demo logins: `admin@blood.org` / `Admin@123`, `staff@blood.org` / `Staff@123`, `donor@blood.org` / `Donor@123`. A reload logs you out (no real cookie in mock mode). |
+| `false`             | Calls Spring Boot. Start the backend on `http://localhost:8080`; Vite forwards `/api/*` to it. If it isn't running you'll see an error message on submit.                                                                                                                                                               |
 
 Restart `npm run dev` after changing the file.
+
+**Token expiry in mock mode** (`src/mocks/mockConfig.js`): access tokens expire after 1 minute (the interceptor
+refreshes them silently), and the session ends after 3 minutes without a refresh (idle timeout). To demo it: log in,
+wait 3 minutes, click any page → you land on Login with "Your session has expired".
 
 ## API contract (for the Spring Boot backend)
 
@@ -116,17 +120,19 @@ src/
 ├── features/users/           # UserTable
 ├── pages/                    # Login, Register, Dashboard, DonorList, DonorDetails, Users, AccessDenied
 ├── services/                 # The ONLY place that talks to the API
-│   ├── apiClient.js          # fetch wrapper: base URL, Bearer token, timeout, safe error messages
-│   ├── authApi.js            # Real calls: login, register, refresh, logout
-│   ├── mockAuthApi.js        # Same functions, in-memory (VITE_USE_MOCK_API=true)
-│   ├── authService.js        # Picks authApi or mockAuthApi; components import from here
+│   ├── apiClient.js          # Axios instance + request/response interceptors (token, 401 refresh, errors)
+│   ├── authService.js        # login, register, refresh, logout
 │   ├── tokenStorage.js       # The ONLY place that reads/writes the access token (memory only)
-│   ├── donorApi.js / mockDonorApi.js / donorService.js   # Same pattern for donors
-│   ├── userApi.js / mockUserApi.js / userService.js      # Same pattern for users
-│   └── mockUsers.js, mockDonors.js, mockDonations.js     # Fake data for mock mode
+│   ├── donorService.js       # donors list, details, donations, delete
+│   └── userService.js        # users list (Admin)
+├── mocks/                    # Fake backend for mock mode (loaded only when VITE_USE_MOCK_API=true)
+│   ├── mockServer.js         # Plugs the fake backend into the Axios instance
+│   ├── mockSession.js        # Fake tokens, idle timeout, withAuth (401/403 like Spring Security)
+│   ├── *Handlers.js          # Fake endpoints for auth, donors, users
+│   └── data/                 # Fake users, donors, donations
 ├── hooks/                    # useForm, useAuth, useFetch (loading/error/reload), useDebouncedValue, useDocumentTitle
 ├── context/                  # AuthContext + AuthProvider
-├── utils/                    # Small pure helpers (getFieldErrors, getErrorId, delay, hasRole, hasPermission, buildQueryString, formatDate, selectApi)
+├── utils/                    # Small pure helpers (getFieldErrors, getErrorId, hasRole, hasPermission, removeEmptyValues, formatDate)
 ├── styles/                   # tokens.css (design tokens) + global.css (classes)
 └── test/setup.js             # Test setup (jest-dom matchers, cleanup)
 ```
@@ -166,17 +172,21 @@ Hiding things in the UI is UX, NOT security: the API must enforce the same rules
 
 ## How the API connection works
 
-1. A form calls `loginUser`/`registerUser` from `services/authService.js`. Components never call `fetch`.
-2. `authService.js` sends the call to `authApi.js` (real) or `mockAuthApi.js`, based on `VITE_USE_MOCK_API`.
-3. `apiClient.js` sends the request with the Bearer token, a 15 s timeout and `credentials: 'include'` (for the cookie).
-4. On failure it throws an `ApiError` with a user-safe message chosen by HTTP status (bad input vs not found vs
-   server error vs offline). `useForm` shows that message in the form's `Alert`.
-5. **Interceptor:** if a non-auth request returns 401 (expired access token), `apiClient` asks `AuthProvider` to
-   refresh the token once and retries. If the refresh fails, the user is logged out and sent to Login.
-6. On login, `AuthProvider` keeps the access token in memory and the user in state. On page reload it calls
+1. A component calls a service function, e.g. `loginUser` from `services/authService.js`. Components never call
+   Axios directly.
+2. The service calls `apiRequest`, which uses the single Axios instance in `services/apiClient.js`
+   (base URL `/api`, 15 s timeout, `withCredentials` for the refresh cookie).
+3. **Request interceptor:** adds `Authorization: Bearer <accessToken>` to every outgoing request.
+4. **Response interceptor:** in one place,
+   - on **401** from a normal request (expired/invalid token), asks `AuthProvider` to refresh the token once and
+     **retries** the request. If the refresh fails, the user is logged out and the Login page shows
+     "Your session has expired". Auth calls (`/auth/*`) never trigger this, and a request is retried only once;
+   - turns every failure into an `ApiError` with a user-safe message by status (bad input 400, session 401,
+     no permission 403, not found 404, server error 5xx, offline/timeout).
+5. On login, `AuthProvider` keeps the access token in memory and the user in state. On page reload it calls
    `/auth/refresh` to restore the session (see `docs/token-storage.md`).
 
 ## Next steps
 
-- Next screens (Donors, Donations, `/donors/:id/donations`) go in `features/donors`, `features/donations`
-  and `pages/`, reusing the same `ui/` components and `useForm`.
+- Build the Spring Boot backend following the API contract above, then set `VITE_USE_MOCK_API=false`.
+- Donation create/edit form with the 90-day eligibility rule, in `features/donations`.
