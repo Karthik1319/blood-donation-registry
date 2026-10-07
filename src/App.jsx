@@ -1,4 +1,5 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
+import { BrowserRouter, Route, Routes } from 'react-router';
+import { LABELS } from '@/constants/labels';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import PublicLayout from '@/components/layout/PublicLayout';
 import { ROUTE_ROLES } from '@/constants/roles';
@@ -15,6 +16,7 @@ import DonorFormPage from '@/pages/DonorFormPage';
 import DonorListPage from '@/pages/DonorListPage';
 import LoginPage from '@/pages/LoginPage';
 import RegisterPage from '@/pages/RegisterPage';
+import StatusPage from '@/pages/StatusPage';
 import UsersPage from '@/pages/UsersPage';
 
 function App() {
@@ -51,9 +53,15 @@ function App() {
                 <Route element={<RoleRoute allowedRoles={ROUTE_ROLES.USERS} />}>
                   <Route path={ROUTES.USERS} element={<UsersPage />} />
                 </Route>
+                {/* Unknown address: logged-out users are sent to Login first by ProtectedRoute. */}
+                <Route
+                  path="*"
+                  element={
+                    <StatusPage title={LABELS.NOT_FOUND_TITLE} message={LABELS.NOT_FOUND_TEXT} />
+                  }
+                />
               </Route>
             </Route>
-            <Route path="*" element={<Navigate to={ROUTES.DASHBOARD} replace />} />
           </Routes>
         </BrowserRouter>
       </ToastProvider>

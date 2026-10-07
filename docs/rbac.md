@@ -72,7 +72,7 @@ must check every rule.
 | `src/constants/roles.js`                                                    | ✅ Added | `ROLES`, `ROLE_LABELS`, `PERMISSIONS`, `ROLE_PERMISSIONS`                                                                   |
 | `src/utils/hasPermission.js`                                                | ✅ Added | `hasPermission(user, PERMISSIONS.DONOR_DELETE)` → show/hide buttons                                                         |
 | `src/features/auth/ProtectedRoute.jsx` / `RoleRoute.jsx` / `GuestRoute.jsx` | ✅ Added | Login required / role required (403 page) / logged-in users kept away from Login                                            |
-| `src/components/layout/Header.jsx`                                          | ✅ Added | Shows the role as text next to the user's name                                                                              |
+| `src/components/layout/Topbar.jsx`                                          | ✅ Added | Shows the role as text next to the user's name                                                                              |
 | `src/pages/DonorListPage.jsx` + `Sidebar.jsx`                               | ✅ Added | Donors route is ADMIN/STAFF only; Delete button ADMIN only; sidebar items filtered by `ROUTE_ROLES`; `/users` is ADMIN only |
 | `apiClient.js` 403 handling                                                 | ✅ Added | Shows "You do not have permission…" when the backend refuses                                                                |
 
@@ -106,7 +106,7 @@ function DonorRow({ donor }) {
 Some apps let a record's owner edit or delete it. Here a donor record isn't linked to a login account yet
 (staff enter donors), so donor CRUD uses role permissions only: ADMIN/STAFF create and edit, ADMIN deletes. When
 donors get accounts, the backend can add an ownership check (`donor.userId == currentUser.id`), and
-`useDonorPermissions` can then allow DONOR users to edit their own profile.
+`useCrudPermissions` can then allow DONOR users to edit their own profile.
 
 ## Open questions for the team
 

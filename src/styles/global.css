@@ -301,6 +301,53 @@ a.button {
   color: var(--color-text-muted);
 }
 
+/* Long words or e-mails wrap inside their cell instead of stretching the table. */
+.table td {
+  overflow-wrap: anywhere;
+}
+
+/* Phones: each row becomes a small card, with each cell's column name (data-label) in front,
+   so no column is hidden off-screen. */
+@media (max-width: 640px) {
+  .table thead {
+    display: none;
+  }
+
+  .table,
+  .table tbody,
+  .table tr,
+  .table td {
+    display: block;
+    width: 100%;
+  }
+
+  .table tr {
+    padding: var(--space-sm) var(--space-md);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .table td {
+    display: flex;
+    gap: var(--space-md);
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-xs) 0;
+    border-bottom: none;
+    text-align: right;
+  }
+
+  .table td::before {
+    content: attr(data-label);
+    /* The label keeps its width; only the value next to it wraps. */
+    flex-shrink: 0;
+    overflow-wrap: normal;
+    margin-right: auto;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    text-align: left;
+  }
+}
+
 /* ---------- Pagination ---------- */
 .pagination {
   display: flex;
@@ -648,4 +695,17 @@ a.button {
 .eligibility span:last-child {
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
+}
+
+.status-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+/* Phones: less padding inside cards so content gets the width. */
+@media (max-width: 640px) {
+  .card {
+    padding: var(--space-lg) var(--space-md);
+  }
 }

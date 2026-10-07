@@ -2,12 +2,15 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { HTTP_STATUS } from '@/constants/api';
 import { LABELS } from '@/constants/labels';
 import { MESSAGES } from '@/constants/messages';
 import { ROUTES } from '@/constants/routes';
 import ToastProvider from '@/context/ToastProvider';
 import DonorFormPage from '@/pages/DonorFormPage';
 import { createDonor, getDonorById, updateDonor } from '@/services/donorService';
+
+import { ApiError } from '@/services/apiClient';
 
 vi.mock('@/services/donorService', () => ({
   createDonor: vi.fn(),
@@ -78,7 +81,7 @@ describe('DonorFormPage', () => {
   });
 
   it('shows an error toast and stays on the form when saving fails', async () => {
-    createDonor.mockRejectedValue(new Error(MESSAGES.DONOR_PHONE_TAKEN));
+    createDonor.mockRejectedValue(new ApiError(HTTP_STATUS.CONFLICT, MESSAGES.DONOR_PHONE_TAKEN));
     renderAt(ROUTES.DONOR_NEW);
     await userEvent.type(
       await screen.findByLabelText(LABELS.FULL_NAME, { exact: false }),

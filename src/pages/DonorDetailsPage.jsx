@@ -4,18 +4,19 @@ import AsyncContent from '@/components/ui/AsyncContent';
 import Card from '@/components/ui/Card';
 import PageHeader from '@/components/ui/PageHeader';
 import { LABELS } from '@/constants/labels';
+import { CRUD_PERMISSIONS } from '@/constants/roles';
 import { MESSAGES } from '@/constants/messages';
 import { BREADCRUMBS } from '@/constants/navigation';
 import { getDonorEditPath } from '@/constants/routes';
 import DonorDonations from '@/features/donations/DonorDonations';
 import DonorSummary from '@/features/donors/DonorSummary';
-import { useDonorPermissions } from '@/features/donors/useDonorPermissions';
+import { useCrudPermissions } from '@/hooks/useCrudPermissions';
 import { useFetch } from '@/hooks/useFetch';
 import { getDonorById } from '@/services/donorService';
 
 function DonorDetailsPage() {
   const { id } = useParams();
-  const { canEdit } = useDonorPermissions();
+  const { canEdit } = useCrudPermissions(CRUD_PERMISSIONS.DONOR);
   const fetchDonor = useCallback(() => getDonorById(id), [id]);
   const { data: donor, isLoading, error, reload } = useFetch(fetchDonor);
 

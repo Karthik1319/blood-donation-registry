@@ -1,6 +1,5 @@
 import PropTypes from 'prop-types';
-import { Link } from 'react-router';
-import Button from '@/components/ui/Button';
+import FormActions from '@/components/ui/FormActions';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import { BLOOD_GROUPS } from '@/constants/config';
@@ -42,14 +41,13 @@ function DonorForm({ initialValues, onSubmit, submitLabel, cancelTo }) {
         placeholder={PLACEHOLDERS.PHONE}
         isRequired
       />
-      <div className="form__actions">
-        <Link to={cancelTo} className="button button--secondary">
-          {LABELS.CANCEL}
-        </Link>
-        <Button type="submit" isLoading={isSubmitting} loadingText={LABELS.SAVING}>
-          {submitLabel}
-        </Button>
-      </div>
+      <FormActions
+        cancelTo={cancelTo}
+        cancelLabel={LABELS.CANCEL}
+        submitLabel={submitLabel}
+        submittingLabel={LABELS.SAVING}
+        isSubmitting={isSubmitting}
+      />
     </form>
   );
 }

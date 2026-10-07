@@ -1,222 +1,193 @@
-# Blood Donation Registry — Frontend
+# Blood Donation Registry: Frontend
 
-React (Vite, JavaScript) frontend for the Blood Donation Registry.
-Scope so far: project structure, shared Page Layout (Header + Footer), Login and Registration forms with Zod
-validation, API connection, secure token handling, **RBAC with protected/role-based routes**, and the
-**Donors list** (search, blood-group filter, pagination), a **dashboard layout** with a role-based sidebar,
-**Donor details** (with donation history), an Admin-only **Users** page, and **full CRUD on donors and
-donations** (one Zod form per entity for add/edit, delete confirmation, success/error toasts), including the
-**90-day eligibility rule** for donations.
+A web app for a blood bank to keep a register of **donors** and their **blood donations**. Staff record donors and
+donations; the app enforces the medical rule that a donor must wait **at least 90 days between donations**, and
+shows each donor's eligibility. Access is role-based: Admin, Staff and Donor accounts see and can do different things.
 
-Research notes: [`docs/token-storage.md`](docs/token-storage.md) (where to keep the token) and
-[`docs/rbac.md`](docs/rbac.md) (roles and where they are enforced).
+Built with React (Vite, JavaScript). The Spring Boot backend is the next step; until then a fake backend runs inside
+the browser and answers the same HTTP requests (see [Mock API vs real API](#mock-api-vs-real-api)).
 
-## Tech stack
+## Features
 
-| Tool                     | Why                                               |
-| ------------------------ | ------------------------------------------------- |
-| React 19 + Vite          | UI library + fast dev server/build                |
-| React Router             | Page navigation (`/login`, `/register`, `/`)      |
-| Zod                      | Form validation schemas                           |
-| PropTypes                | Documents and checks props of reusable components |
-| ESLint + Prettier        | Code quality and consistent formatting            |
-| Vitest + Testing Library | Unit tests                                        |
+- Login and registration with live Zod validation (password rules turn green as they are met)
+- Secure session: access token in memory only, refresh token in an HttpOnly cookie, silent refresh on expiry
+- Role-based access: protected routes, role-based sidebar, 403 page, buttons shown per permission
+- Donors: list with search, blood-group filter and pagination; details; add/edit (one form); delete with confirmation
+- Donations: history per donor; add/edit (one form); delete; **90-day eligibility rule** with a live status banner
+- Success/error toasts for every create, update and delete; loading, error and empty states on every page
+- Responsive: the sidebar becomes a menu and tables become cards on phones
+- Unit and integration tests for validation, business rules, API layer, permissions and pages (`npm test`)
 
-## Setup (macOS or Windows)
+## Getting started
 
-1. Install **Node.js 24 LTS** (see `.nvmrc`; Node 20+ works) from https://nodejs.org.
-2. In the project folder:
+Works the same on macOS and Windows.
+
+1. Install **Node.js 20 or newer** (24 LTS recommended, see `.nvmrc`) and **Git**.
+2. Clone and start:
 
 ```bash
+git clone https://github.com/Karthik1319/blood-donation-registry1.git
+cd blood-donation-registry1
 npm ci          # installs the exact versions from package-lock.json
 npm run dev     # open http://localhost:5173
 ```
 
+## Test login credentials
+
+Available in mock mode (`VITE_USE_MOCK_API=true`, the default):
+
+| Role  | Email             | Password    | Can do                                                        |
+| ----- | ----------------- | ----------- | ------------------------------------------------------------- |
+| Admin | `admin@blood.org` | `Admin@123` | Everything, including delete and the Users page               |
+| Staff | `staff@blood.org` | `Staff@123` | View, add and edit donors and donations (no delete, no Users) |
+| Donor | `donor@blood.org` | `Donor@123` | Dashboard only (the Donors page shows 403)                    |
+
+New accounts from the Register page are always **Donor**. Mock data resets when the page reloads, and a reload also
+logs you out (there is no real cookie in mock mode).
+
+## Environment variables
+
+Set in `.env.development` (loaded by `npm run dev`). `VITE_` variables are bundled into the browser and are
+**public**: never put secrets in them.
+
+| Variable            | Default | Meaning                                                                          |
+| ------------------- | ------- | -------------------------------------------------------------------------------- |
+| `VITE_API_BASE_URL` | `/api`  | Where API calls go. In development Vite forwards `/api` to `localhost:8080`.     |
+| `VITE_USE_MOCK_API` | `true`  | `true`: fake backend in the browser. `false`: real Spring Boot API on port 8080. |
+
+Restart `npm run dev` after changing them.
+
+## Scripts
+
+| Command                | What it does                                                    |
+| ---------------------- | --------------------------------------------------------------- |
+| `npm run dev`          | Start the dev server                                            |
+| `npm run check`        | **Quality gate**: lint, format check, tests and build in one go |
+| `npm run lint`         | ESLint; fails on any error or warning                           |
+| `npm run format:check` | Prettier formatting check (`npm run format` fixes it)           |
+| `npm test`             | Run all tests once (`npm run test:watch` while coding)          |
+| `npm run build`        | Production build into `dist/`                                   |
+
+## Roles, routes and permissions
+
+| Page                       | Route                                               | Who can open it              |
+| -------------------------- | --------------------------------------------------- | ---------------------------- |
+| Login, Register            | `/login`, `/register`                               | Logged-out users only        |
+| Dashboard                  | `/`                                                 | Any logged-in user           |
+| Donors list, donor details | `/donors`, `/donors/:id`                            | Admin, Staff                 |
+| Add/Edit donor             | `/donors/new`, `/donors/:id/edit`                   | Admin, Staff                 |
+| Add/Edit donation          | `/donors/:id/donations/new`, `.../:donationId/edit` | Admin, Staff                 |
+| Users                      | `/users`                                            | Admin                        |
+| Unknown address            | anything else                                       | Shows "404 - Page not found" |
+
+Inside pages, **actions** are controlled by permissions (`ROLE_PERMISSIONS` in `src/constants/roles.js`):
+
+| Action              | Admin | Staff | Donor |
+| ------------------- | :---: | :---: | :---: |
+| Add / edit donor    |   ✓   |   ✓   |       |
+| Delete donor        |   ✓   |       |       |
+| Add / edit donation |   ✓   |   ✓   |       |
+| Delete donation     |   ✓   |       |       |
+
+Hiding pages and buttons is for user experience only. The API checks the same rules on every request (the fake
+backend already does: a forbidden call gets **403**).
+
+## The 90-day eligibility rule
+
+A donor must wait at least 90 days between donations. The rule is written once, in
+`src/utils/donationEligibility.js`, and used in three places:
+
+1. **Donor details:** a banner shows "✓ Eligible to donate today" or "✗ Not eligible until &lt;date&gt;".
+2. **Donation form:** a date less than 90 days from _any_ other donation of that donor shows a live error and the
+   form won't submit. Back-filled (older) dates are checked against later donations too, and an edited donation is
+   not compared with itself.
+3. **Server:** rejects the same cases with **422**, shown as an error toast. The server has the final say.
+
 ## Mock API vs real API
 
-`.env.development` (loaded by `npm run dev`) has the switch:
+With `VITE_USE_MOCK_API=true`, `src/mocks/` answers the Axios requests inside the browser, so the interceptors,
+tokens, 401 and 403 all run exactly as they will with Spring Boot. To demonstrate token expiry
+(`src/mocks/mockConfig.js`): access tokens expire after **1 minute** and are refreshed silently; after **3 minutes**
+without activity the session ends and the next click lands on Login with "Your session has expired".
 
-| `VITE_USE_MOCK_API` | Behaviour                                                                                                                                                                                                                                                                                                               |
-| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `true` (default)    | No backend needed: `src/mocks/` answers the Axios requests in the browser, so interceptors, tokens, 401 and 403 work exactly as with the real API. Demo logins: `admin@blood.org` / `Admin@123`, `staff@blood.org` / `Staff@123`, `donor@blood.org` / `Donor@123`. A reload logs you out (no real cookie in mock mode). |
-| `false`             | Calls Spring Boot. Start the backend on `http://localhost:8080`; Vite forwards `/api/*` to it. If it isn't running you'll see an error message on submit.                                                                                                                                                               |
-
-Restart `npm run dev` after changing the file.
-
-**Token expiry in mock mode** (`src/mocks/mockConfig.js`): access tokens expire after 1 minute (the interceptor
-refreshes them silently), and the session ends after 3 minutes without a refresh (idle timeout). To demo it: log in,
-wait 3 minutes, click any page → you land on Login with "Your session has expired".
+To use the real backend: start Spring Boot on `http://localhost:8080`, set `VITE_USE_MOCK_API=false` and restart
+`npm run dev`. The fake backend is then never downloaded.
 
 ## API contract (for the Spring Boot backend)
 
-All paths are under `/api`. JSON in and out. Errors never need a body; the frontend shows its own safe messages.
+All paths are under `/api`, JSON in and out, Bearer token on every non-auth call. Error responses need no body: the
+frontend shows its own safe message for each status.
 
-| Endpoint                  | Request body                                       | Success                                           | Errors used by the UI                        |
-| ------------------------- | -------------------------------------------------- | ------------------------------------------------- | -------------------------------------------- |
-| `POST /api/auth/login`    | `{ email, password }`                              | `200 { accessToken, user }` + sets refresh cookie | `400`/`401` → "Invalid email or password"    |
-| `POST /api/auth/register` | `{ fullName, email, phone, bloodGroup, password }` | `201` (body optional)                             | `409` → email taken, `400` → invalid details |
-| `POST /api/auth/refresh`  | none (refresh cookie sent automatically)           | `200 { accessToken, user }` + rotates cookie      | `401` → stay logged out                      |
-| `POST /api/auth/logout`   | none                                               | `204`, cookie cleared                             | ignored; the frontend logs out anyway        |
+| Endpoint                                      | Request body                                       | Success                                               | Errors the UI handles                      |
+| --------------------------------------------- | -------------------------------------------------- | ----------------------------------------------------- | ------------------------------------------ |
+| `POST /api/auth/login`                        | `{ email, password }`                              | `200 { accessToken, user }` + sets refresh cookie     | `400`/`401` → "Invalid email or password"  |
+| `POST /api/auth/register`                     | `{ fullName, email, phone, bloodGroup, password }` | `201`                                                 | `409` email taken, `400` invalid           |
+| `POST /api/auth/refresh`                      | none (cookie sent automatically)                   | `200 { accessToken, user }` + rotates cookie          | `401` → logged out                         |
+| `POST /api/auth/logout`                       | none                                               | `204`, cookie cleared                                 | ignored; the frontend logs out anyway      |
+| `GET /api/donors?page&size&search&bloodGroup` | none                                               | `200 { content: Donor[], totalElements, totalPages }` | `401` → refresh + retry once               |
+| `GET /api/donors/{id}`                        | none                                               | `200 Donor`                                           | `404`                                      |
+| `POST /api/donors`                            | `{ name, bloodGroup, phone }`                      | `201 Donor`                                           | `409` phone already used, `403`            |
+| `PUT /api/donors/{id}`                        | `{ name, bloodGroup, phone }`                      | `200 Donor`                                           | `409`, `404`, `403`                        |
+| `DELETE /api/donors/{id}`                     | none (Admin only)                                  | `204`; the donor's donations are deleted too          | `403`, `404`                               |
+| `GET /api/donors/{id}/donations`              | none                                               | `200 Donation[]`, newest first                        | `404` donor not found                      |
+| `POST /api/donors/{id}/donations`             | `{ donationDate, quantity, location }`             | `201 Donation`                                        | `422` within 90 days, `400` invalid, `403` |
+| `PUT /api/donations/{id}`                     | `{ donationDate, quantity, location }`             | `200 Donation`                                        | `422` within 90 days, `404`, `403`         |
+| `DELETE /api/donations/{id}`                  | none (Admin only)                                  | `204`                                                 | `403`, `404`                               |
+| `GET /api/users`                              | none (Admin only)                                  | `200 [{ id, fullName, email, role }]`                 | `403`                                      |
 
-| `GET /api/donors?page=0&size=5&search=&bloodGroup=` | none (Bearer token) | `200 { content: Donor[], totalElements, totalPages }` | `401` → refresh + retry once, `403` → no permission |
-| `GET /api/donors/{id}` | none (Bearer token) | `200 Donor` | `404` not found |
-| `GET /api/donors/{id}/donations` | none (Bearer token) | `200 Donation[]`, newest first | `404` donor not found |
-| `POST /api/donors/{id}/donations` | `{ donationDate, quantity, location }` (ADMIN, STAFF) | `201 Donation` | `422` within 90 days of another donation, `400` invalid |
-| `PUT /api/donations/{id}` | `{ donationDate, quantity, location }` (ADMIN, STAFF) | `200 Donation` | `422` within 90 days, `404` not found |
-| `DELETE /api/donations/{id}` | none (ADMIN only) | `204` | `403` no permission, `404` not found |
-| `GET /api/users` | none (Bearer token, ADMIN only) | `200 [{ id, fullName, email, role }]` | `403` no permission |
-| `POST /api/donors` | `{ name, bloodGroup, phone }` (ADMIN, STAFF) | `201 Donor` | `409` phone already used, `403` no permission |
-| `PUT /api/donors/{id}` | `{ name, bloodGroup, phone }` (ADMIN, STAFF) | `200 Donor` | `409` phone already used, `404` not found |
-| `DELETE /api/donors/{id}` | none (Bearer token, ADMIN only) | `204` | `403` no permission, `404` not found |
-
-`Donor` = `{ id, name, bloodGroup, phone }`. `Donation` = `{ id, donorId, donationDate: "YYYY-MM-DD", quantity (ml, 350–450), location }`. Deleting a donor also deletes their donations. `page` starts at 0 (Spring Data style); empty filters are not sent.
-`user` = `{ fullName, email, role }` where `role` is `ADMIN`, `STAFF` or `DONOR`.
-Refresh cookie: `HttpOnly; Secure; SameSite=Strict; Path=/api/auth`.
-Any other failure maps to: `403` no permission, `404` not found, `5xx` generic error, no response → "Unable to reach the server".
-
-## Scripts (quality gate — all must pass before a commit)
-
-| Command                | What it does                          |
-| ---------------------- | ------------------------------------- |
-| `npm run dev`          | Start the dev server                  |
-| `npm run lint`         | ESLint, fails on any error or warning |
-| `npm run format:check` | Checks Prettier formatting            |
-| `npm run format`       | Fixes formatting                      |
-| `npm test`             | Runs unit tests once                  |
-| `npm run build`        | Production build into `dist/`         |
-
-## Moving the project to another machine (e.g. Mac → Dell/Windows)
-
-- Copy/clone the project **without** `node_modules` and `dist`, then run `npm ci`.
-  `node_modules` contains OS-specific binaries, so it must always be installed on the machine itself.
-- Line endings: `.gitattributes`, `.editorconfig` and Prettier's `endOfLine: "lf"` keep files in LF on Windows,
-  so `format:check` does not fail. If Git on Windows still converts them, run `git config core.autocrlf false`
-  and re-clone.
-- If `npm run build` fails with `Cannot find module @rollup/rollup-win32-x64-msvc` (known npm issue with lock files
-  created on another OS): delete `node_modules` and `package-lock.json`, then run `npm install`.
-- ESLint is pinned to v9 because `eslint-plugin-react` does not support v10 yet — no `--force` or
-  `--legacy-peer-deps` needed.
+- `Donor` = `{ id, name, bloodGroup, phone }`
+- `Donation` = `{ id, donorId, donationDate: "YYYY-MM-DD", quantity (ml, 350–450), location }`
+- `user` = `{ id, fullName, email, role }`, where role is `ADMIN`, `STAFF` or `DONOR`
+- `page` starts at 0 (Spring Data style); empty filters are not sent
+- Refresh cookie: `HttpOnly; Secure; SameSite=Strict; Path=/api/auth`
+- Any other status: `5xx` → "Something went wrong"; no response or timeout → "Unable to reach the server"
 
 ## Folder structure
 
 ```
 src/
-├── main.jsx                  # Entry point: renders <App /> and loads global CSS
-├── App.jsx                   # Routes; every page is wrapped in PageLayout
-├── constants/                # Fixed values — no magic strings in components
-│   ├── routes.js             # URL paths
-│   ├── labels.js             # UI text (titles, field labels, buttons)
-│   ├── messages.js           # Validation + server messages
-│   ├── limits.js             # Numeric limits (name length, password length…)
-│   ├── validation.js         # Regex patterns + PASSWORD_RULES
-│   ├── config.js             # App config (API URL, mock switch, timeout) + blood groups
-│   ├── api.js                # API endpoint paths + HTTP status codes
-│   ├── roles.js              # Roles, permissions, which role has which permission, route roles
-│   └── navigation.js         # Sidebar menu items (NAV_ITEMS) and breadcrumb steps
+├── main.jsx                 # Entry point (starts the fake backend first in mock mode)
+├── App.jsx                  # All routes and their guards
+├── constants/               # Every fixed value: routes, labels, messages, limits, roles, API paths, config
 ├── components/
-│   ├── ui/                   # Reusable, presentational only (no business logic, no text)
-│   │   ├── Button.jsx  Input.jsx  Select.jsx  FormField.jsx
-│   │   ├── Card.jsx  Alert.jsx  PasswordChecklist.jsx  LoadingMessage.jsx
-│   │   ├── AsyncContent.jsx  Pagination.jsx  ConfirmDialog.jsx  ToastList.jsx
-│   │   ├── PageHeader.jsx (title + breadcrumbs + tab title)
-│   └── layout/               # PublicLayout + PublicHeader; DashboardLayout + Sidebar + Topbar; Footer
-├── features/auth/            # Login/Registration forms, Zod schemas, ProtectedRoute, GuestRoute, RoleRoute
-├── features/donors/          # DonorForm + donorSchema (add/edit), DonorTable, DonorFilters, DonorSummary,
-│                             # useDonors (filters + page + fetch), useDonorPermissions
-├── features/donations/       # DonationForm + donationSchema (add/edit), DonationTable, DonorDonations,
-│                             # EligibilityStatus, useDonationPermissions
-├── features/shared/          # DeleteDialog (confirm + delete + toast, for any record)
-├── schemas/fieldSchemas.js   # Zod rules shared by forms (name, email, phone, blood group)
-├── features/users/           # UserTable
-├── pages/                    # Login, Register, Dashboard, DonorList, DonorDetails, DonorForm, Users, AccessDenied
-├── services/                 # The ONLY place that talks to the API
-│   ├── apiClient.js          # Axios instance + request/response interceptors (token, 401 refresh, errors)
-│   ├── authService.js        # login, register, refresh, logout
-│   ├── tokenStorage.js       # The ONLY place that reads/writes the access token (memory only)
-│   ├── donorService.js       # donors list, details, donations, delete
-│   └── userService.js        # users list (Admin)
-├── mocks/                    # Fake backend for mock mode (loaded only when VITE_USE_MOCK_API=true)
-│   ├── mockServer.js         # Plugs the fake backend into the Axios instance
-│   ├── mockSession.js        # Fake tokens, idle timeout, withAuth (401/403 like Spring Security)
-│   ├── mockDb.js             # In-memory "tables" (donors, donations) shared by the handlers
-│   ├── *Handlers.js          # Fake endpoints for auth, donors, donations, users
-│   └── data/                 # Fake users, donors, donations
-├── hooks/                    # useForm, useAuth, useFetch, useToast, useNotifiedAction, useDebouncedValue, useDocumentTitle
-├── context/                  # AuthContext + AuthProvider, ToastContext + ToastProvider
-├── utils/                    # Small pure helpers (getFieldErrors, getErrorId, hasRole, hasPermission, removeEmptyValues,
-│                             # formatDate, dateUtils, donationEligibility = the 90-day rule)
-├── styles/                   # tokens.css (design tokens) + global.css (classes)
-└── test/setup.js             # Test setup (jest-dom matchers, cleanup)
+│   ├── ui/                  # Reusable presentational pieces: Button, Input, Select, Card, Alert, PageHeader,
+│   │                        # AsyncContent, Pagination, ConfirmDialog, FormActions, ToastList, ...
+│   └── layout/              # PublicLayout, DashboardLayout, Sidebar, Topbar, Footer, PageErrorBoundary
+├── features/
+│   ├── auth/                # Login/Registration forms + schemas, ProtectedRoute, GuestRoute, RoleRoute
+│   ├── donors/              # DonorForm + schema, DonorTable, DonorFilters, DonorSummary, useDonors
+│   ├── donations/           # DonationForm + schema, DonationTable, DonorDonations, EligibilityStatus
+│   ├── users/               # UserTable
+│   └── shared/              # DeleteDialog, RowActions (used by donors and donations)
+├── pages/                   # One component per route
+├── services/                # The ONLY place that talks to the API: apiClient (Axios + interceptors),
+│                            # authService, donorService, donationService, userService, tokenStorage
+├── mocks/                   # Fake backend for mock mode (handlers, in-memory database, fake tokens)
+├── hooks/                   # useForm, useFetch, useAuth, useToast, useNotifiedAction, useCrudPermissions, ...
+├── context/                 # AuthProvider (logged-in user), ToastProvider (notifications)
+├── schemas/                 # Zod field rules shared by several forms
+├── utils/                   # Pure helpers: dates, the 90-day rule, permissions, error messages, ...
+└── styles/                  # tokens.css (design tokens) + global.css
 ```
 
-## How validation works
+## Further reading
 
-1. Each form has a **Zod schema** (`loginSchema.js`, `registrationSchema.js`) describing every rule and its message.
-2. `useForm(schema, initialValues)` stores the values and, on every render, runs `getFieldErrors(schema, values)`.
-3. A field's error is shown **as soon as the user types in it or leaves it** (live validation), and for all fields
-   after pressing Submit. The message disappears the moment the rule is satisfied.
-4. Password rules live once in `PASSWORD_RULES`. The schema uses them to decide validity and `PasswordChecklist`
-   uses them to show each rule **red with ✗ until met, then green with ✓**.
-5. Confirm password uses `.refine()` on the whole object because it compares two fields.
+- [`docs/walkthrough.md`](docs/walkthrough.md): review guide (structure, auth flow, RBAC, one feature end to end)
+- [`docs/token-storage.md`](docs/token-storage.md): why the token is kept in memory plus an HttpOnly cookie
+- [`docs/rbac.md`](docs/rbac.md): roles, permissions and where each rule is enforced
 
-Client-side validation is for user experience only; the Spring Boot API must validate everything again.
+## Moving the project to another machine (e.g. Mac → Windows)
 
-## The 90-day eligibility rule (project edge case)
+- Clone with Git and run `npm ci`. Never copy `node_modules`: it contains OS-specific files.
+- On Windows, run `git config --global core.autocrlf false` **before** cloning. `.gitattributes`, `.editorconfig`
+  and Prettier keep line endings as LF so `npm run format:check` passes on both systems.
+- ESLint is pinned to v9 because `eslint-plugin-react` doesn't support v10 yet, so no `--force` is needed.
 
-A donor must wait at least 90 days between donations (`LIMITS.MIN_DAYS_BETWEEN_DONATIONS`). The rule lives once,
-in `src/utils/donationEligibility.js` (pure functions, unit-tested), and is used in three places:
+## Troubleshooting
 
-1. **Donor details page:** a banner shows "✓ Eligible to donate today" or "✗ Not eligible until <date>".
-2. **Donation form (Zod):** a date less than 90 days from _any_ other donation of that donor shows a live red
-   error and the form won't submit. Both directions are checked, so back-filling an old donation is allowed only
-   if it is far enough from every other one; when editing, the donation isn't compared with itself.
-3. **Server (fake backend now, Spring Boot later):** rejects the same cases with **422**, shown as an error
-   toast. The UI check is for fast feedback; the server is the real gate.
-
-## Routes, layouts and roles
-
-| Route                                               | Layout          | Who can open it                                | Guard                          |
-| --------------------------------------------------- | --------------- | ---------------------------------------------- | ------------------------------ |
-| `/login`, `/register`                               | PublicLayout    | Logged-out users only (others go to Dashboard) | `GuestRoute`                   |
-| `/` Dashboard                                       | DashboardLayout | Any logged-in user                             | `ProtectedRoute`               |
-| `/donors`, `/donors/:id`                            | DashboardLayout | ADMIN, STAFF (DONOR sees the 403 page)         | `ProtectedRoute` + `RoleRoute` |
-| `/donors/new`, `/donors/:id/edit`                   | DashboardLayout | ADMIN, STAFF (same `DonorFormPage`)            | `ProtectedRoute` + `RoleRoute` |
-| `/donors/:id/donations/new`, `.../:donationId/edit` | DashboardLayout | ADMIN, STAFF (same `DonationFormPage`)         | `ProtectedRoute` + `RoleRoute` |
-| `/users`                                            | DashboardLayout | ADMIN only                                     | `ProtectedRoute` + `RoleRoute` |
-
-**Adding a page to the menu:** add the route to `ROUTES`, its roles to `ROUTE_ROLES` (if restricted), and one line
-to `NAV_ITEMS` in `constants/navigation.js`. The sidebar and the route guard both read `ROUTE_ROLES`, so they
-can't disagree. The active page is highlighted with `NavLink` (bold + background + left bar + `aria-current`).
-
-On screens under 768px the sidebar is hidden behind a ☰ button; it closes on link click, backdrop click or Esc.
-
-**Donor actions:** Add and Edit for ADMIN and STAFF, Delete for ADMIN only (`useDonorPermissions`). The fake
-backend enforces the same rules, so a forbidden call gets 403 even if someone bypasses the UI.
-Every create, update and delete shows a **toast** (success, or the API's error) via `useNotifiedAction`.
-
-Pages and menu items are controlled by **role** (`ROUTE_ROLES`, `hasRole`); actions such as the **Delete** button
-by **permission** (`ROLE_PERMISSIONS`, `hasPermission`), shown to ADMIN only.
-Hiding things in the UI is UX, NOT security: the API must enforce the same rules.
-
-**Logout** calls `/auth/logout`, clears the in-memory token and user, and redirects to Login.
-
-## How the API connection works
-
-1. A component calls a service function, e.g. `loginUser` from `services/authService.js`. Components never call
-   Axios directly.
-2. The service calls `apiRequest`, which uses the single Axios instance in `services/apiClient.js`
-   (base URL `/api`, 15 s timeout, `withCredentials` for the refresh cookie).
-3. **Request interceptor:** adds `Authorization: Bearer <accessToken>` to every outgoing request.
-4. **Response interceptor:** in one place,
-   - on **401** from a normal request (expired/invalid token), asks `AuthProvider` to refresh the token once and
-     **retries** the request. If the refresh fails, the user is logged out and the Login page shows
-     "Your session has expired". Auth calls (`/auth/*`) never trigger this, and a request is retried only once;
-   - turns every failure into an `ApiError` with a user-safe message by status (bad input 400, session 401,
-     no permission 403, not found 404, server error 5xx, offline/timeout).
-5. On login, `AuthProvider` keeps the access token in memory and the user in state. On page reload it calls
-   `/auth/refresh` to restore the session (see `docs/token-storage.md`).
-
-## Next steps
-
-- Build the Spring Boot backend following the API contract above, then set `VITE_USE_MOCK_API=false`.
-- Optional: a Donations page listing all donations across donors (with date-range filter).
+| Problem                                               | Fix                                                                   |
+| ----------------------------------------------------- | --------------------------------------------------------------------- |
+| `Cannot find module @rollup/rollup-win32-x64-msvc`    | Delete `node_modules` and `package-lock.json`, then run `npm install` |
+| `format:check` fails on Windows only                  | Line endings: set `core.autocrlf false` and clone again               |
+| Every request fails with "Unable to reach the server" | `VITE_USE_MOCK_API=false` but Spring Boot isn't running on port 8080  |
+| Logged out after reloading the page                   | Expected in mock mode (no real refresh cookie)                        |

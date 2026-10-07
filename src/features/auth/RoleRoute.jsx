@@ -1,7 +1,8 @@
 import PropTypes from 'prop-types';
 import { Outlet } from 'react-router';
 import { useAuth } from '@/hooks/useAuth';
-import AccessDeniedPage from '@/pages/AccessDeniedPage';
+import { LABELS } from '@/constants/labels';
+import StatusPage from '@/pages/StatusPage';
 import { hasRole } from '@/utils/hasRole';
 
 /**
@@ -13,7 +14,10 @@ import { hasRole } from '@/utils/hasRole';
  */
 function RoleRoute({ allowedRoles }) {
   const { user } = useAuth();
-  return hasRole(user, allowedRoles) ? <Outlet /> : <AccessDeniedPage />;
+  if (!hasRole(user, allowedRoles)) {
+    return <StatusPage title={LABELS.ACCESS_DENIED_TITLE} message={LABELS.ACCESS_DENIED_TEXT} />;
+  }
+  return <Outlet />;
 }
 
 RoleRoute.propTypes = {

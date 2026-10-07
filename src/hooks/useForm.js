@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MESSAGES } from '@/constants/messages';
+import { getErrorMessage } from '@/utils/getErrorMessage';
 import { getFieldErrors } from '@/utils/getFieldErrors';
 
 /**
@@ -43,7 +43,7 @@ export function useForm(schema, initialValues) {
     try {
       await onValidSubmit(result.data);
     } catch (error) {
-      setSubmitError(error.message || MESSAGES.GENERIC_ERROR);
+      setSubmitError(getErrorMessage(error));
     } finally {
       setIsSubmitting(false);
     }

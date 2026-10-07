@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import AsyncContent from '@/components/ui/AsyncContent';
 import Card from '@/components/ui/Card';
@@ -27,7 +27,8 @@ function DonationFormPage() {
   const donorRequest = useFetch(fetchDonor);
   const donationsRequest = useFetch(fetchDonations);
   const donor = donorRequest.data;
-  const donations = donationsRequest.data ?? [];
+  // Memoized so the form's Zod schema isn't rebuilt on every render.
+  const donations = useMemo(() => donationsRequest.data ?? [], [donationsRequest.data]);
   const donation = donations.find((d) => d.id === Number(donationId));
   const detailsPath = getDonorDetailsPath(donorId);
 

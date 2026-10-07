@@ -2,7 +2,9 @@ import { LIMITS } from '@/constants/limits';
 import { MESSAGES } from '@/constants/messages';
 
 export const PATTERNS = {
-  NAME: /^[A-Za-z ]+$/,
+  // Starts with a letter in any language (\p{L}), then letters, spaces, apostrophes, hyphens or
+  // dots: allows "O'Brien", "Anne-Marie", "Dr. Rao", "Zoë"; blocks digits and symbols.
+  NAME: /^\p{L}[\p{L} .'-]*$/u,
   EMAIL: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
   PHONE: new RegExp(`^\\d{${LIMITS.PHONE_DIGITS}}$`),
   ISO_DATE: /^\d{4}-\d{2}-\d{2}$/,

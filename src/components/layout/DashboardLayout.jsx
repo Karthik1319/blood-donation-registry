@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Outlet } from 'react-router';
 import Footer from '@/components/layout/Footer';
+import PageErrorBoundary from '@/components/layout/PageErrorBoundary';
 import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import { LABELS } from '@/constants/labels';
@@ -44,7 +45,9 @@ function DashboardLayout() {
           onMenuClick={() => setIsSidebarOpen(true)}
         />
         <main className="dashboard__content">
-          <Outlet />
+          <PageErrorBoundary>
+            <Outlet />
+          </PageErrorBoundary>
         </main>
         <Footer />
       </div>

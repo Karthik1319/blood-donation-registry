@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
+import { HTTP_STATUS } from '@/constants/api';
 import { LABELS } from '@/constants/labels';
 import { MESSAGES } from '@/constants/messages';
 import { ROLES } from '@/constants/roles';
@@ -11,6 +12,8 @@ import { getDonorDonations } from '@/services/donationService';
 import { getDonorById } from '@/services/donorService';
 import { addDays, getTodayIsoDate } from '@/utils/dateUtils';
 import { formatDate } from '@/utils/formatDate';
+
+import { ApiError } from '@/services/apiClient';
 
 vi.mock('@/services/donorService', () => ({ getDonorById: vi.fn() }));
 vi.mock('@/services/donationService', () => ({
@@ -77,7 +80,7 @@ describe('DonorDetailsPage', () => {
   });
 
   it('shows the error from the API when the donor does not exist', async () => {
-    getDonorById.mockRejectedValue(new Error(MESSAGES.NOT_FOUND));
+    getDonorById.mockRejectedValue(new ApiError(HTTP_STATUS.NOT_FOUND, MESSAGES.NOT_FOUND));
     renderPage();
     expect(await screen.findByText(MESSAGES.NOT_FOUND)).toBeInTheDocument();
     expect(screen.queryByText(LABELS.DONATIONS_TITLE)).not.toBeInTheDocument();

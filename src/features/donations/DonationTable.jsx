@@ -1,8 +1,7 @@
 import PropTypes from 'prop-types';
-import { Link } from 'react-router';
-import Button from '@/components/ui/Button';
 import { LABELS } from '@/constants/labels';
 import { getDonationEditPath } from '@/constants/routes';
+import RowActions from '@/features/shared/RowActions';
 import { formatDate } from '@/utils/formatDate';
 
 /**
@@ -33,30 +32,20 @@ function DonationTable({ donations, canEdit, canDelete, onDeleteClick }) {
             const date = formatDate(donation.donationDate);
             return (
               <tr key={donation.id}>
-                <td>{date}</td>
-                <td>{LABELS.quantityInMl(donation.quantity)}</td>
-                <td>{donation.location}</td>
+                <td data-label={LABELS.COLUMN_DATE}>{date}</td>
+                <td data-label={LABELS.COLUMN_QUANTITY}>
+                  {LABELS.quantityInMl(donation.quantity)}
+                </td>
+                <td data-label={LABELS.COLUMN_LOCATION}>{donation.location}</td>
                 {hasActions && (
-                  <td className="table__actions">
-                    {canEdit && (
-                      <Link
-                        to={getDonationEditPath(donation.donorId, donation.id)}
-                        className="button button--secondary"
-                        aria-label={LABELS.editDonationAriaLabel(date)}
-                      >
-                        {LABELS.EDIT}
-                      </Link>
-                    )}
-                    {canDelete && (
-                      <Button
-                        variant="danger"
-                        onClick={() => onDeleteClick(donation)}
-                        ariaLabel={LABELS.deleteDonationAriaLabel(date)}
-                      >
-                        {LABELS.DELETE}
-                      </Button>
-                    )}
-                  </td>
+                  <RowActions
+                    canEdit={canEdit}
+                    canDelete={canDelete}
+                    editTo={getDonationEditPath(donation.donorId, donation.id)}
+                    editLabel={LABELS.editDonationAriaLabel(date)}
+                    deleteLabel={LABELS.deleteDonationAriaLabel(date)}
+                    onDelete={() => onDeleteClick(donation)}
+                  />
                 )}
               </tr>
             );

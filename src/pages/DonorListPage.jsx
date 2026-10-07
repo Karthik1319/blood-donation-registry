@@ -4,20 +4,21 @@ import AsyncContent from '@/components/ui/AsyncContent';
 import PageHeader from '@/components/ui/PageHeader';
 import Pagination from '@/components/ui/Pagination';
 import { LABELS } from '@/constants/labels';
+import { CRUD_PERMISSIONS } from '@/constants/roles';
 import { BREADCRUMBS } from '@/constants/navigation';
 import { ROUTES } from '@/constants/routes';
 import DonorFilters from '@/features/donors/DonorFilters';
 import DonorTable from '@/features/donors/DonorTable';
-import { useDonorPermissions } from '@/features/donors/useDonorPermissions';
 import { useDonors } from '@/features/donors/useDonors';
 import DeleteDialog from '@/features/shared/DeleteDialog';
+import { useCrudPermissions } from '@/hooks/useCrudPermissions';
 import { deleteDonor } from '@/services/donorService';
 
 function DonorListPage() {
   const [donorToDelete, setDonorToDelete] = useState(null);
   const { filters, changeFilter, page, setPage, donors, totalPages, isLoading, error, reload } =
     useDonors();
-  const { canCreate, canEdit, canDelete } = useDonorPermissions();
+  const { canCreate, canEdit, canDelete } = useCrudPermissions(CRUD_PERMISSIONS.DONOR);
 
   const handleDeleted = () => {
     setDonorToDelete(null);

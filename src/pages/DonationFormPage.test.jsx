@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { HTTP_STATUS } from '@/constants/api';
 import { LABELS } from '@/constants/labels';
 import { MESSAGES } from '@/constants/messages';
 import { ROUTES } from '@/constants/routes';
@@ -11,6 +12,8 @@ import { createDonation, getDonorDonations, updateDonation } from '@/services/do
 import { getDonorById } from '@/services/donorService';
 import { addDays, getTodayIsoDate } from '@/utils/dateUtils';
 import { formatDate } from '@/utils/formatDate';
+
+import { ApiError } from '@/services/apiClient';
 
 vi.mock('@/services/donorService', () => ({ getDonorById: vi.fn() }));
 vi.mock('@/services/donationService', () => ({
@@ -100,7 +103,9 @@ describe('DonationFormPage', () => {
   });
 
   it('shows an error toast when the server rejects the donation (422)', async () => {
-    createDonation.mockRejectedValue(new Error(MESSAGES.DONATION_NOT_ELIGIBLE));
+    createDonation.mockRejectedValue(
+      new ApiError(HTTP_STATUS.UNPROCESSABLE_ENTITY, MESSAGES.DONATION_NOT_ELIGIBLE),
+    );
     renderAt('/donors/1/donations/new');
     await fillForm(addDays(today, -200));
     await userEvent.click(screen.getByRole('button', { name: LABELS.ADD_DONATION }));

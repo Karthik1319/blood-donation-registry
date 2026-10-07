@@ -4,11 +4,12 @@ import { Link } from 'react-router';
 import AsyncContent from '@/components/ui/AsyncContent';
 import Card from '@/components/ui/Card';
 import { LABELS } from '@/constants/labels';
+import { CRUD_PERMISSIONS } from '@/constants/roles';
 import { getDonationNewPath } from '@/constants/routes';
 import DonationTable from '@/features/donations/DonationTable';
 import EligibilityStatus from '@/features/donations/EligibilityStatus';
-import { useDonationPermissions } from '@/features/donations/useDonationPermissions';
 import DeleteDialog from '@/features/shared/DeleteDialog';
+import { useCrudPermissions } from '@/hooks/useCrudPermissions';
 import { useFetch } from '@/hooks/useFetch';
 import { deleteDonation, getDonorDonations } from '@/services/donationService';
 import { formatDate } from '@/utils/formatDate';
@@ -20,7 +21,7 @@ import { formatDate } from '@/utils/formatDate';
  * @param {string|number} props.donorId - the donor whose donations are shown.
  */
 function DonorDonations({ donorId }) {
-  const { canCreate, canEdit, canDelete } = useDonationPermissions();
+  const { canCreate, canEdit, canDelete } = useCrudPermissions(CRUD_PERMISSIONS.DONATION);
   const [donationToDelete, setDonationToDelete] = useState(null);
   const fetchDonations = useCallback(() => getDonorDonations(donorId), [donorId]);
   const { data, isLoading, error, reload } = useFetch(fetchDonations);

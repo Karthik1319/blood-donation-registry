@@ -5,7 +5,7 @@ export const MESSAGES = {
   NAME_REQUIRED: 'Full name is required',
   NAME_MIN: `Full name must be at least ${LIMITS.NAME_MIN} characters`,
   NAME_MAX: `Full name must be at most ${LIMITS.NAME_MAX} characters`,
-  NAME_INVALID: 'Full name can contain only letters and spaces',
+  NAME_INVALID: "Full name can contain only letters, spaces, apostrophes ('), hyphens (-) and dots",
   EMAIL_REQUIRED: 'Email is required',
   EMAIL_INVALID: 'Enter a valid email address (e.g. name@example.com)',
   EMAIL_MAX: `Email must be at most ${LIMITS.EMAIL_MAX} characters`,

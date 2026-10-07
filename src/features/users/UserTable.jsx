@@ -21,9 +21,9 @@ function UserTable({ users }) {
         <tbody>
           {users.map((user) => (
             <tr key={user.id}>
-              <td>{user.fullName}</td>
-              <td>{user.email}</td>
-              <td>
+              <td data-label={LABELS.COLUMN_NAME}>{user.fullName}</td>
+              <td data-label={LABELS.COLUMN_EMAIL}>{user.email}</td>
+              <td data-label={LABELS.COLUMN_ROLE}>
                 <span className="badge">{ROLE_LABELS[user.role]}</span>
               </td>
             </tr>

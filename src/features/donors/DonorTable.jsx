@@ -1,8 +1,8 @@
 import PropTypes from 'prop-types';
 import { Link } from 'react-router';
-import Button from '@/components/ui/Button';
 import { LABELS } from '@/constants/labels';
 import { getDonorDetailsPath, getDonorEditPath } from '@/constants/routes';
+import RowActions from '@/features/shared/RowActions';
 
 /**
  * Table of donors. The Actions column only exists when the user may edit or delete.
@@ -29,34 +29,22 @@ function DonorTable({ donors, canEdit, canDelete, onDeleteClick }) {
         <tbody>
           {donors.map((donor) => (
             <tr key={donor.id}>
-              <td>
+              <td data-label={LABELS.COLUMN_NAME}>
                 <Link to={getDonorDetailsPath(donor.id)}>{donor.name}</Link>
               </td>
-              <td>
+              <td data-label={LABELS.COLUMN_BLOOD_GROUP}>
                 <span className="badge">{donor.bloodGroup}</span>
               </td>
-              <td>{donor.phone}</td>
+              <td data-label={LABELS.COLUMN_PHONE}>{donor.phone}</td>
               {hasActions && (
-                <td className="table__actions">
-                  {canEdit && (
-                    <Link
-                      to={getDonorEditPath(donor.id)}
-                      className="button button--secondary"
-                      aria-label={LABELS.editDonorAriaLabel(donor.name)}
-                    >
-                      {LABELS.EDIT}
-                    </Link>
-                  )}
-                  {canDelete && (
-                    <Button
-                      variant="danger"
-                      onClick={() => onDeleteClick(donor)}
-                      ariaLabel={LABELS.deleteDonorAriaLabel(donor.name)}
-                    >
-                      {LABELS.DELETE}
-                    </Button>
-                  )}
-                </td>
+                <RowActions
+                  canEdit={canEdit}
+                  canDelete={canDelete}
+                  editTo={getDonorEditPath(donor.id)}
+                  editLabel={LABELS.editDonorAriaLabel(donor.name)}
+                  deleteLabel={LABELS.deleteDonorAriaLabel(donor.name)}
+                  onDelete={() => onDeleteClick(donor)}
+                />
               )}
             </tr>
           ))}

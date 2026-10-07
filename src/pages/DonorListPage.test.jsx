@@ -1,11 +1,15 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
+import { HTTP_STATUS } from '@/constants/api';
 import { LABELS } from '@/constants/labels';
+import { MESSAGES } from '@/constants/messages';
 import { ROLES } from '@/constants/roles';
 import { AuthContext } from '@/context/AuthContext';
 import DonorListPage from '@/pages/DonorListPage';
 import { getDonors } from '@/services/donorService';
+
+import { ApiError } from '@/services/apiClient';
 
 vi.mock('@/services/donorService', () => ({
   getDonors: vi.fn(),
@@ -54,9 +58,9 @@ describe('DonorListPage', () => {
   });
 
   it('shows the error and a retry button when the request fails', async () => {
-    getDonors.mockRejectedValue(new Error('Unable to reach the server.'));
+    getDonors.mockRejectedValue(new ApiError(HTTP_STATUS.NETWORK_ERROR, MESSAGES.NETWORK_ERROR));
     renderAs(ROLES.STAFF);
-    expect(await screen.findByText('Unable to reach the server.')).toBeInTheDocument();
+    expect(await screen.findByText(MESSAGES.NETWORK_ERROR)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: LABELS.RETRY })).toBeInTheDocument();
   });
 

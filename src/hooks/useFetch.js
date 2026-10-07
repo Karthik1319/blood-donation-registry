@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { getErrorMessage } from '@/utils/getErrorMessage';
 
 /**
  * Runs `fetchData` (a function returning a promise) and tracks its result.
@@ -25,7 +26,7 @@ export function useFetch(fetchData) {
         }
       } catch (requestError) {
         if (isCurrent) {
-          setError(requestError.message);
+          setError(getErrorMessage(requestError));
         }
       } finally {
         if (isCurrent) {

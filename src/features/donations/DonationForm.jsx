@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import PropTypes from 'prop-types';
-import { Link } from 'react-router';
-import Button from '@/components/ui/Button';
+import FormActions from '@/components/ui/FormActions';
 import Input from '@/components/ui/Input';
 import { LABELS, PLACEHOLDERS } from '@/constants/labels';
 import { createDonationSchema } from '@/features/donations/donationSchema';
@@ -44,14 +43,13 @@ function DonationForm({ initialValues, donations, editingId, onSubmit, submitLab
         placeholder={PLACEHOLDERS.LOCATION}
         isRequired
       />
-      <div className="form__actions">
-        <Link to={cancelTo} className="button button--secondary">
-          {LABELS.CANCEL}
-        </Link>
-        <Button type="submit" isLoading={isSubmitting} loadingText={LABELS.SAVING}>
-          {submitLabel}
-        </Button>
-      </div>
+      <FormActions
+        cancelTo={cancelTo}
+        cancelLabel={LABELS.CANCEL}
+        submitLabel={submitLabel}
+        submittingLabel={LABELS.SAVING}
+        isSubmitting={isSubmitting}
+      />
     </form>
   );
 }

@@ -23,6 +23,23 @@ describe('registrationSchema', () => {
     expect(errorsFor({ fullName: '' }).fullName).toBe(MESSAGES.NAME_REQUIRED);
     expect(errorsFor({ fullName: 'R' }).fullName).toBe(MESSAGES.NAME_MIN);
     expect(errorsFor({ fullName: 'Ravi 123' }).fullName).toBe(MESSAGES.NAME_INVALID);
+    expect(errorsFor({ fullName: 'Ravi <script>' }).fullName).toBe(MESSAGES.NAME_INVALID);
+    expect(errorsFor({ fullName: '-Ravi' }).fullName).toBe(MESSAGES.NAME_INVALID);
+  });
+
+  it('accepts real-world names with special characters', () => {
+    ["O'Brien", 'Anne-Marie Rao', 'Dr. K. Rao', 'Zoë Müller', 'José'].forEach((fullName) => {
+      expect(errorsFor({ fullName })).toEqual({});
+    });
+  });
+
+  it('trims spaces and treats a space-only name as empty', () => {
+    expect(errorsFor({ fullName: '   ' }).fullName).toBe(MESSAGES.NAME_REQUIRED);
+  });
+
+  it('limits very long text', () => {
+    expect(errorsFor({ fullName: 'A'.repeat(51) }).fullName).toBe(MESSAGES.NAME_MAX);
+    expect(errorsFor({ email: `${'a'.repeat(95)}@x.com` }).email).toBe(MESSAGES.EMAIL_MAX);
   });
 
   it('requires a 10 digit phone number', () => {

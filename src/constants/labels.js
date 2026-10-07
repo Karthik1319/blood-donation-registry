@@ -34,6 +34,11 @@ export const LABELS = {
   CANCEL: 'Cancel',
   ACCESS_DENIED_TITLE: '403 - Access denied',
   ACCESS_DENIED_TEXT: 'Your role does not allow you to open this page.',
+  NOT_FOUND_TITLE: '404 - Page not found',
+  NOT_FOUND_TEXT:
+    'This address does not match any page. Check the link or go back to the dashboard.',
+  CRASH_TITLE: 'Something went wrong',
+  CRASH_TEXT: 'This page hit an unexpected problem. Try again, or go back to the dashboard.',
   BACK_TO_DASHBOARD: 'Back to dashboard',
   documentTitle: (pageTitle) => `${pageTitle} | ${APP_NAME}`,
 
