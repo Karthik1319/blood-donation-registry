@@ -614,3 +614,38 @@ a.button {
   border: none;
   cursor: pointer;
 }
+
+/* ---------- Donations: toolbar + 90-day eligibility banner ---------- */
+.section-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-md);
+}
+
+.eligibility {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin: 0;
+  padding: var(--space-sm) var(--space-md);
+  border-left: 4px solid;
+  border-radius: var(--radius);
+}
+
+.eligibility--yes {
+  color: var(--color-success);
+  background: var(--color-success-bg);
+}
+
+.eligibility--no {
+  color: var(--color-error);
+  background: var(--color-error-bg);
+}
+
+.eligibility span:last-child {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}

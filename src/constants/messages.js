@@ -29,6 +29,17 @@ export const MESSAGES = {
   LOGIN_FAILED: 'Invalid email or password',
   EMAIL_TAKEN: 'An account with this email already exists',
   DONOR_PHONE_TAKEN: 'Another donor already uses this phone number',
+  DONATION_DATE_REQUIRED: 'Donation date is required',
+  DONATION_DATE_INVALID: 'Enter a valid date',
+  DONATION_DATE_FUTURE: 'Donation date cannot be in the future',
+  QUANTITY_REQUIRED: 'Quantity is required',
+  QUANTITY_RANGE: `Quantity must be a whole number from ${LIMITS.QUANTITY_MIN_ML} to ${LIMITS.QUANTITY_MAX_ML} ml`,
+  LOCATION_REQUIRED: 'Location is required',
+  LOCATION_MAX: `Location must be at most ${LIMITS.LOCATION_MAX} characters`,
+  // Shown when the server rejects a donation with 422 (the 90-day rule).
+  DONATION_NOT_ELIGIBLE: `Not eligible: donations must be at least ${LIMITS.MIN_DAYS_BETWEEN_DONATIONS} days apart.`,
+  donationTooSoon: (otherDate) =>
+    `Too soon: this donor has a donation on ${otherDate}. Donations must be at least ${LIMITS.MIN_DAYS_BETWEEN_DONATIONS} days apart.`,
   REGISTER_SUCCESS: 'Registration successful. Please log in.',
   GENERIC_ERROR: 'Something went wrong. Please try again.',
   NETWORK_ERROR: 'Unable to reach the server. Check your connection and try again.',

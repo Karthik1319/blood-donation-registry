@@ -5,6 +5,7 @@ export const PATTERNS = {
   NAME: /^[A-Za-z ]+$/,
   EMAIL: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
   PHONE: new RegExp(`^\\d{${LIMITS.PHONE_DIGITS}}$`),
+  ISO_DATE: /^\d{4}-\d{2}-\d{2}$/,
 };
 
 // Single source of truth: the Zod schema AND the live checklist both read these rules.

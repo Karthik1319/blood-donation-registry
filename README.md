@@ -4,8 +4,9 @@ React (Vite, JavaScript) frontend for the Blood Donation Registry.
 Scope so far: project structure, shared Page Layout (Header + Footer), Login and Registration forms with Zod
 validation, API connection, secure token handling, **RBAC with protected/role-based routes**, and the
 **Donors list** (search, blood-group filter, pagination), a **dashboard layout** with a role-based sidebar,
-**Donor details** (with donation history), an Admin-only **Users** page, and **full donor CRUD** (one Zod form for
-add/edit, delete confirmation, success/error toasts).
+**Donor details** (with donation history), an Admin-only **Users** page, and **full CRUD on donors and
+donations** (one Zod form per entity for add/edit, delete confirmation, success/error toasts), including the
+**90-day eligibility rule** for donations.
 
 Research notes: [`docs/token-storage.md`](docs/token-storage.md) (where to keep the token) and
 [`docs/rbac.md`](docs/rbac.md) (roles and where they are enforced).
@@ -60,12 +61,15 @@ All paths are under `/api`. JSON in and out. Errors never need a body; the front
 | `GET /api/donors?page=0&size=5&search=&bloodGroup=` | none (Bearer token) | `200 { content: Donor[], totalElements, totalPages }` | `401` → refresh + retry once, `403` → no permission |
 | `GET /api/donors/{id}` | none (Bearer token) | `200 Donor` | `404` not found |
 | `GET /api/donors/{id}/donations` | none (Bearer token) | `200 Donation[]`, newest first | `404` donor not found |
+| `POST /api/donors/{id}/donations` | `{ donationDate, quantity, location }` (ADMIN, STAFF) | `201 Donation` | `422` within 90 days of another donation, `400` invalid |
+| `PUT /api/donations/{id}` | `{ donationDate, quantity, location }` (ADMIN, STAFF) | `200 Donation` | `422` within 90 days, `404` not found |
+| `DELETE /api/donations/{id}` | none (ADMIN only) | `204` | `403` no permission, `404` not found |
 | `GET /api/users` | none (Bearer token, ADMIN only) | `200 [{ id, fullName, email, role }]` | `403` no permission |
 | `POST /api/donors` | `{ name, bloodGroup, phone }` (ADMIN, STAFF) | `201 Donor` | `409` phone already used, `403` no permission |
 | `PUT /api/donors/{id}` | `{ name, bloodGroup, phone }` (ADMIN, STAFF) | `200 Donor` | `409` phone already used, `404` not found |
 | `DELETE /api/donors/{id}` | none (Bearer token, ADMIN only) | `204` | `403` no permission, `404` not found |
 
-`Donor` = `{ id, name, bloodGroup, phone }`. `Donation` = `{ id, donationDate: "YYYY-MM-DD", quantity (ml), location }`. `page` starts at 0 (Spring Data style); empty filters are not sent.
+`Donor` = `{ id, name, bloodGroup, phone }`. `Donation` = `{ id, donorId, donationDate: "YYYY-MM-DD", quantity (ml, 350–450), location }`. Deleting a donor also deletes their donations. `page` starts at 0 (Spring Data style); empty filters are not sent.
 `user` = `{ fullName, email, role }` where `role` is `ADMIN`, `STAFF` or `DONOR`.
 Refresh cookie: `HttpOnly; Secure; SameSite=Strict; Path=/api/auth`.
 Any other failure maps to: `403` no permission, `404` not found, `5xx` generic error, no response → "Unable to reach the server".
@@ -117,8 +121,11 @@ src/
 │   │   ├── PageHeader.jsx (title + breadcrumbs + tab title)
 │   └── layout/               # PublicLayout + PublicHeader; DashboardLayout + Sidebar + Topbar; Footer
 ├── features/auth/            # Login/Registration forms, Zod schemas, ProtectedRoute, GuestRoute, RoleRoute
-├── features/donors/          # DonorForm + donorSchema (add/edit), DonorTable, DonorFilters, DeleteDonorDialog,
-│                             # DonorSummary, DonationTable, useDonors, useDonorPermissions
+├── features/donors/          # DonorForm + donorSchema (add/edit), DonorTable, DonorFilters, DonorSummary,
+│                             # useDonors (filters + page + fetch), useDonorPermissions
+├── features/donations/       # DonationForm + donationSchema (add/edit), DonationTable, DonorDonations,
+│                             # EligibilityStatus, useDonationPermissions
+├── features/shared/          # DeleteDialog (confirm + delete + toast, for any record)
 ├── schemas/fieldSchemas.js   # Zod rules shared by forms (name, email, phone, blood group)
 ├── features/users/           # UserTable
 ├── pages/                    # Login, Register, Dashboard, DonorList, DonorDetails, DonorForm, Users, AccessDenied
@@ -131,11 +138,13 @@ src/
 ├── mocks/                    # Fake backend for mock mode (loaded only when VITE_USE_MOCK_API=true)
 │   ├── mockServer.js         # Plugs the fake backend into the Axios instance
 │   ├── mockSession.js        # Fake tokens, idle timeout, withAuth (401/403 like Spring Security)
-│   ├── *Handlers.js          # Fake endpoints for auth, donors, users
+│   ├── mockDb.js             # In-memory "tables" (donors, donations) shared by the handlers
+│   ├── *Handlers.js          # Fake endpoints for auth, donors, donations, users
 │   └── data/                 # Fake users, donors, donations
 ├── hooks/                    # useForm, useAuth, useFetch, useToast, useNotifiedAction, useDebouncedValue, useDocumentTitle
 ├── context/                  # AuthContext + AuthProvider, ToastContext + ToastProvider
-├── utils/                    # Small pure helpers (getFieldErrors, getErrorId, hasRole, hasPermission, removeEmptyValues, formatDate)
+├── utils/                    # Small pure helpers (getFieldErrors, getErrorId, hasRole, hasPermission, removeEmptyValues,
+│                             # formatDate, dateUtils, donationEligibility = the 90-day rule)
 ├── styles/                   # tokens.css (design tokens) + global.css (classes)
 └── test/setup.js             # Test setup (jest-dom matchers, cleanup)
 ```
@@ -152,15 +161,28 @@ src/
 
 Client-side validation is for user experience only; the Spring Boot API must validate everything again.
 
+## The 90-day eligibility rule (project edge case)
+
+A donor must wait at least 90 days between donations (`LIMITS.MIN_DAYS_BETWEEN_DONATIONS`). The rule lives once,
+in `src/utils/donationEligibility.js` (pure functions, unit-tested), and is used in three places:
+
+1. **Donor details page:** a banner shows "✓ Eligible to donate today" or "✗ Not eligible until <date>".
+2. **Donation form (Zod):** a date less than 90 days from _any_ other donation of that donor shows a live red
+   error and the form won't submit. Both directions are checked, so back-filling an old donation is allowed only
+   if it is far enough from every other one; when editing, the donation isn't compared with itself.
+3. **Server (fake backend now, Spring Boot later):** rejects the same cases with **422**, shown as an error
+   toast. The UI check is for fast feedback; the server is the real gate.
+
 ## Routes, layouts and roles
 
-| Route                             | Layout          | Who can open it                                | Guard                          |
-| --------------------------------- | --------------- | ---------------------------------------------- | ------------------------------ |
-| `/login`, `/register`             | PublicLayout    | Logged-out users only (others go to Dashboard) | `GuestRoute`                   |
-| `/` Dashboard                     | DashboardLayout | Any logged-in user                             | `ProtectedRoute`               |
-| `/donors`, `/donors/:id`          | DashboardLayout | ADMIN, STAFF (DONOR sees the 403 page)         | `ProtectedRoute` + `RoleRoute` |
-| `/donors/new`, `/donors/:id/edit` | DashboardLayout | ADMIN, STAFF (same `DonorFormPage`)            | `ProtectedRoute` + `RoleRoute` |
-| `/users`                          | DashboardLayout | ADMIN only                                     | `ProtectedRoute` + `RoleRoute` |
+| Route                                               | Layout          | Who can open it                                | Guard                          |
+| --------------------------------------------------- | --------------- | ---------------------------------------------- | ------------------------------ |
+| `/login`, `/register`                               | PublicLayout    | Logged-out users only (others go to Dashboard) | `GuestRoute`                   |
+| `/` Dashboard                                       | DashboardLayout | Any logged-in user                             | `ProtectedRoute`               |
+| `/donors`, `/donors/:id`                            | DashboardLayout | ADMIN, STAFF (DONOR sees the 403 page)         | `ProtectedRoute` + `RoleRoute` |
+| `/donors/new`, `/donors/:id/edit`                   | DashboardLayout | ADMIN, STAFF (same `DonorFormPage`)            | `ProtectedRoute` + `RoleRoute` |
+| `/donors/:id/donations/new`, `.../:donationId/edit` | DashboardLayout | ADMIN, STAFF (same `DonationFormPage`)         | `ProtectedRoute` + `RoleRoute` |
+| `/users`                                            | DashboardLayout | ADMIN only                                     | `ProtectedRoute` + `RoleRoute` |
 
 **Adding a page to the menu:** add the route to `ROUTES`, its roles to `ROUTE_ROLES` (if restricted), and one line
 to `NAV_ITEMS` in `constants/navigation.js`. The sidebar and the route guard both read `ROUTE_ROLES`, so they
@@ -197,4 +219,4 @@ Hiding things in the UI is UX, NOT security: the API must enforce the same rules
 ## Next steps
 
 - Build the Spring Boot backend following the API contract above, then set `VITE_USE_MOCK_API=false`.
-- Donation create/edit with the 90-day eligibility rule, in `features/donations` (reusing `useForm` and `useNotifiedAction`).
+- Optional: a Donations page listing all donations across donors (with date-range filter).

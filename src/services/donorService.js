@@ -22,11 +22,6 @@ export function getDonorById(id) {
   return apiRequest(API_ENDPOINTS.DONOR_BY_ID(id));
 }
 
-/** GET /donors/:id/donations → [{ id, donationDate, quantity, location }], newest first. */
-export function getDonorDonations(id) {
-  return apiRequest(API_ENDPOINTS.DONOR_DONATIONS(id));
-}
-
 /** POST /donors with { name, bloodGroup, phone } → 201 with the new donor (incl. id). */
 export function createDonor(donor) {
   return apiRequest(API_ENDPOINTS.DONORS, {

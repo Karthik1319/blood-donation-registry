@@ -24,6 +24,8 @@ export const ROUTE_ROLES = {
   DONORS: [ROLES.ADMIN, ROLES.STAFF],
   // Add/Edit donor pages; matches the DONOR_CREATE/DONOR_UPDATE permissions below.
   DONOR_FORM: [ROLES.ADMIN, ROLES.STAFF],
+  // Add/Edit donation pages; matches DONATION_CREATE/DONATION_UPDATE.
+  DONATION_FORM: [ROLES.ADMIN, ROLES.STAFF],
   USERS: [ROLES.ADMIN],
 };
 

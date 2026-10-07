@@ -9,6 +9,7 @@ import ProtectedRoute from '@/features/auth/ProtectedRoute';
 import RoleRoute from '@/features/auth/RoleRoute';
 import DashboardPage from '@/pages/DashboardPage';
 import ToastProvider from '@/context/ToastProvider';
+import DonationFormPage from '@/pages/DonationFormPage';
 import DonorDetailsPage from '@/pages/DonorDetailsPage';
 import DonorFormPage from '@/pages/DonorFormPage';
 import DonorListPage from '@/pages/DonorListPage';
@@ -41,6 +42,11 @@ function App() {
                   {/* Same page for both: an :id in the URL means edit mode. */}
                   <Route path={ROUTES.DONOR_NEW} element={<DonorFormPage />} />
                   <Route path={ROUTES.DONOR_EDIT} element={<DonorFormPage />} />
+                </Route>
+                <Route element={<RoleRoute allowedRoles={ROUTE_ROLES.DONATION_FORM} />}>
+                  {/* Same page for both: a :donationId in the URL means edit mode. */}
+                  <Route path={ROUTES.DONATION_NEW} element={<DonationFormPage />} />
+                  <Route path={ROUTES.DONATION_EDIT} element={<DonationFormPage />} />
                 </Route>
                 <Route element={<RoleRoute allowedRoles={ROUTE_ROLES.USERS} />}>
                   <Route path={ROUTES.USERS} element={<UsersPage />} />

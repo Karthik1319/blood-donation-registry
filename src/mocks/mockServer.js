@@ -1,5 +1,6 @@
 import MockAdapter from 'axios-mock-adapter';
 import { registerAuthHandlers } from '@/mocks/authHandlers';
+import { registerDonationHandlers } from '@/mocks/donationHandlers';
 import { registerDonorHandlers } from '@/mocks/donorHandlers';
 import { MOCK_CONFIG } from '@/mocks/mockConfig';
 import { registerUserHandlers } from '@/mocks/userHandlers';
@@ -13,6 +14,7 @@ export function startMockServer(axiosInstance, delayMs = MOCK_CONFIG.DELAY_MS) {
   const mock = new MockAdapter(axiosInstance, { delayResponse: delayMs });
   registerAuthHandlers(mock);
   registerDonorHandlers(mock);
+  registerDonationHandlers(mock);
   registerUserHandlers(mock);
   return mock;
 }

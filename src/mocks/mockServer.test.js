@@ -5,14 +5,23 @@ import { MOCK_CONFIG } from '@/mocks/mockConfig';
 import { startMockServer } from '@/mocks/mockServer';
 import { apiClient, setUnauthorizedHandler } from '@/services/apiClient';
 import { loginUser, refreshSession } from '@/services/authService';
+import {
+  createDonation,
+  deleteDonation,
+  getDonorDonations,
+  updateDonation,
+} from '@/services/donationService';
 import { createDonor, deleteDonor, getDonors, updateDonor } from '@/services/donorService';
 import { getUsers } from '@/services/userService';
 import { setAccessToken } from '@/services/tokenStorage';
+import { addDays, getTodayIsoDate } from '@/utils/dateUtils';
 
 // Runs the real services → Axios interceptors → fake backend, like the app does in mock mode.
 
 const STAFF = { email: 'staff@blood.org', password: 'Staff@123' };
 const DONOR_USER = { email: 'donor@blood.org', password: 'Donor@123' };
+const ADMIN = { email: 'admin@blood.org', password: 'Admin@123' };
+const daysAgo = (days) => addDays(getTodayIsoDate(), -days);
 const PAGE = { page: 0, size: 5 };
 
 async function logInAs(credentials) {
@@ -85,5 +94,49 @@ describe('mock backend through the real API layer', () => {
     await expect(
       createDonor({ name: 'Not Allowed', bloodGroup: 'B+', phone: '9222222222' }),
     ).rejects.toMatchObject({ status: HTTP_STATUS.FORBIDDEN });
+  });
+
+  describe('donations and the 90-day rule (server side)', () => {
+    const NEW_DONATION = { quantity: 450, location: 'City Blood Bank' };
+
+    it('rejects a donation within 90 days of another one with 422', async () => {
+      await logInAs(STAFF);
+      // Mock donor 1 last donated 56 days ago.
+      await expect(
+        createDonation(1, { ...NEW_DONATION, donationDate: daysAgo(0) }),
+      ).rejects.toMatchObject({
+        status: HTTP_STATUS.UNPROCESSABLE_ENTITY,
+        message: MESSAGES.DONATION_NOT_ELIGIBLE,
+      });
+    });
+
+    it('accepts an eligible donation and lists it newest first', async () => {
+      await logInAs(STAFF);
+      // Mock donor 8 last donated 107 days ago.
+      const created = await createDonation(8, { ...NEW_DONATION, donationDate: daysAgo(0) });
+      const donations = await getDonorDonations(8);
+      expect(donations[0]).toEqual(created);
+    });
+
+    it('applies the rule when editing a date, too', async () => {
+      await logInAs(STAFF);
+      // Moving donor 1's oldest donation (309 days ago) next to the one 160 days ago.
+      await expect(
+        updateDonation(103, { ...NEW_DONATION, donationDate: daysAgo(150) }),
+      ).rejects.toMatchObject({ status: HTTP_STATUS.UNPROCESSABLE_ENTITY });
+    });
+
+    it('lets only Admin delete a donation', async () => {
+      await logInAs(STAFF);
+      await expect(deleteDonation(102)).rejects.toMatchObject({ status: HTTP_STATUS.FORBIDDEN });
+      await logInAs(ADMIN);
+      await expect(deleteDonation(102)).resolves.toBeNull();
+    });
+
+    it('deletes the donations of a deleted donor (cascade)', async () => {
+      await logInAs(ADMIN);
+      await deleteDonor(3);
+      await expect(getDonorDonations(3)).rejects.toMatchObject({ status: HTTP_STATUS.NOT_FOUND });
+    });
   });
 });

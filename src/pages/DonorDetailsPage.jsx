@@ -7,21 +7,17 @@ import { LABELS } from '@/constants/labels';
 import { MESSAGES } from '@/constants/messages';
 import { BREADCRUMBS } from '@/constants/navigation';
 import { getDonorEditPath } from '@/constants/routes';
-import DonationTable from '@/features/donors/DonationTable';
+import DonorDonations from '@/features/donations/DonorDonations';
 import DonorSummary from '@/features/donors/DonorSummary';
 import { useDonorPermissions } from '@/features/donors/useDonorPermissions';
 import { useFetch } from '@/hooks/useFetch';
-import { getDonorById, getDonorDonations } from '@/services/donorService';
+import { getDonorById } from '@/services/donorService';
 
 function DonorDetailsPage() {
   const { id } = useParams();
   const { canEdit } = useDonorPermissions();
   const fetchDonor = useCallback(() => getDonorById(id), [id]);
-  const fetchDonations = useCallback(() => getDonorDonations(id), [id]);
-  const donorRequest = useFetch(fetchDonor);
-  const donationsRequest = useFetch(fetchDonations);
-  const donor = donorRequest.data;
-  const donations = donationsRequest.data ?? [];
+  const { data: donor, isLoading, error, reload } = useFetch(fetchDonor);
 
   return (
     <section className="page">
@@ -39,31 +35,18 @@ function DonorDetailsPage() {
         }
       />
       <AsyncContent
-        isLoading={donorRequest.isLoading}
-        error={donorRequest.error}
+        isLoading={isLoading}
+        error={error}
         isEmpty={!donor}
         loadingText={LABELS.LOADING}
         emptyText={MESSAGES.NOT_FOUND}
         retryLabel={LABELS.RETRY}
-        onRetry={donorRequest.reload}
+        onRetry={reload}
       >
         <Card title={LABELS.DONOR_DETAILS_TITLE} titleAs="h2" isWide>
           {donor && <DonorSummary donor={donor} />}
         </Card>
-        {/* The child list for this parent: GET /donors/:id/donations */}
-        <Card title={LABELS.DONATIONS_TITLE} titleAs="h2" isWide>
-          <AsyncContent
-            isLoading={donationsRequest.isLoading}
-            error={donationsRequest.error}
-            isEmpty={donations.length === 0}
-            loadingText={LABELS.LOADING}
-            emptyText={LABELS.NO_DONATIONS}
-            retryLabel={LABELS.RETRY}
-            onRetry={donationsRequest.reload}
-          >
-            <DonationTable donations={donations} />
-          </AsyncContent>
-        </Card>
+        <DonorDonations donorId={id} />
       </AsyncContent>
     </section>
   );

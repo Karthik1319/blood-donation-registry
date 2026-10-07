@@ -3,35 +3,21 @@ import { Link } from 'react-router';
 import AsyncContent from '@/components/ui/AsyncContent';
 import PageHeader from '@/components/ui/PageHeader';
 import Pagination from '@/components/ui/Pagination';
-import { APP_CONFIG } from '@/constants/config';
 import { LABELS } from '@/constants/labels';
 import { BREADCRUMBS } from '@/constants/navigation';
 import { ROUTES } from '@/constants/routes';
-import DeleteDonorDialog from '@/features/donors/DeleteDonorDialog';
 import DonorFilters from '@/features/donors/DonorFilters';
 import DonorTable from '@/features/donors/DonorTable';
 import { useDonorPermissions } from '@/features/donors/useDonorPermissions';
 import { useDonors } from '@/features/donors/useDonors';
-import { useDebouncedValue } from '@/hooks/useDebouncedValue';
-
-const INITIAL_FILTERS = { search: '', bloodGroup: '' };
+import DeleteDialog from '@/features/shared/DeleteDialog';
+import { deleteDonor } from '@/services/donorService';
 
 function DonorListPage() {
-  const [filters, setFilters] = useState(INITIAL_FILTERS);
-  const [page, setPage] = useState(0);
   const [donorToDelete, setDonorToDelete] = useState(null);
-  const search = useDebouncedValue(filters.search, APP_CONFIG.SEARCH_DEBOUNCE_MS);
-  const { donors, totalPages, isLoading, error, reload } = useDonors({
-    page,
-    search,
-    bloodGroup: filters.bloodGroup,
-  });
+  const { filters, changeFilter, page, setPage, donors, totalPages, isLoading, error, reload } =
+    useDonors();
   const { canCreate, canEdit, canDelete } = useDonorPermissions();
-
-  const changeFilter = (name, value) => {
-    setFilters((previous) => ({ ...previous, [name]: value }));
-    setPage(0);
-  };
 
   const handleDeleted = () => {
     setDonorToDelete(null);
@@ -85,8 +71,11 @@ function DonorListPage() {
         />
       </AsyncContent>
       {donorToDelete && (
-        <DeleteDonorDialog
-          donor={donorToDelete}
+        <DeleteDialog
+          title={LABELS.DELETE_DONOR_TITLE}
+          message={LABELS.deleteDonorMessage(donorToDelete.name)}
+          onDelete={() => deleteDonor(donorToDelete.id)}
+          successMessage={LABELS.donorDeleted(donorToDelete.name)}
           onCancel={() => setDonorToDelete(null)}
           onDeleted={handleDeleted}
         />
