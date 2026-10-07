@@ -22,6 +22,8 @@ export const ROLE_DESCRIPTIONS = {
 // so a page and its menu item can never disagree about who may see them.
 export const ROUTE_ROLES = {
   DONORS: [ROLES.ADMIN, ROLES.STAFF],
+  // Add/Edit donor pages; matches the DONOR_CREATE/DONOR_UPDATE permissions below.
+  DONOR_FORM: [ROLES.ADMIN, ROLES.STAFF],
   USERS: [ROLES.ADMIN],
 };
 

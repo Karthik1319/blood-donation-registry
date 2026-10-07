@@ -2,10 +2,12 @@ import { useState } from 'react';
 import PropTypes from 'prop-types';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { LABELS } from '@/constants/labels';
+import { useNotifiedAction } from '@/hooks/useNotifiedAction';
 import { deleteDonor } from '@/services/donorService';
 
 /**
- * Asks for confirmation, then deletes the donor through the API.
+ * Asks for confirmation, then deletes the donor through the API. Success and failure are
+ * reported with a toast; on failure the dialog stays open so the user can retry or cancel.
  * @param {object} props
  * @param {{id: number, name: string}} props.donor - donor to delete.
  * @param {Function} props.onCancel - closes the dialog.
@@ -13,16 +15,17 @@ import { deleteDonor } from '@/services/donorService';
  */
 function DeleteDonorDialog({ donor, onCancel, onDeleted }) {
   const [isDeleting, setIsDeleting] = useState(false);
-  const [error, setError] = useState('');
+  const runAction = useNotifiedAction();
 
   const confirmDelete = async () => {
     setIsDeleting(true);
-    setError('');
-    try {
-      await deleteDonor(donor.id);
+    const { isSuccess } = await runAction(
+      () => deleteDonor(donor.id),
+      LABELS.donorDeleted(donor.name),
+    );
+    if (isSuccess) {
       onDeleted(donor);
-    } catch (deleteError) {
-      setError(deleteError.message);
+    } else {
       setIsDeleting(false);
     }
   };
@@ -37,7 +40,6 @@ function DeleteDonorDialog({ donor, onCancel, onDeleted }) {
       onConfirm={confirmDelete}
       onCancel={onCancel}
       isConfirming={isDeleting}
-      error={error}
     />
   );
 }

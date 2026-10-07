@@ -73,8 +73,8 @@ function RegistrationForm() {
         password={values.password}
         rules={PASSWORD_RULES}
         title={LABELS.PASSWORD_CHECKLIST_TITLE}
-        metIcon={LABELS.RULE_MET_ICON}
-        unmetIcon={LABELS.RULE_UNMET_ICON}
+        metIcon={LABELS.SUCCESS_ICON}
+        unmetIcon={LABELS.ERROR_ICON}
       />
       <Input
         {...getFieldProps('confirmPassword')}

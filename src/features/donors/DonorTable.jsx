@@ -2,16 +2,19 @@ import PropTypes from 'prop-types';
 import { Link } from 'react-router';
 import Button from '@/components/ui/Button';
 import { LABELS } from '@/constants/labels';
-import { getDonorDetailsPath } from '@/constants/routes';
+import { getDonorDetailsPath, getDonorEditPath } from '@/constants/routes';
 
 /**
- * Table of donors. The Actions column only exists when the user may delete.
+ * Table of donors. The Actions column only exists when the user may edit or delete.
  * @param {object} props
  * @param {{id: number, name: string, bloodGroup: string, phone: string}[]} props.donors - rows.
+ * @param {boolean} props.canEdit - shows the Edit links.
  * @param {boolean} props.canDelete - shows the Delete buttons.
  * @param {Function} props.onDeleteClick - called with the donor to delete.
  */
-function DonorTable({ donors, canDelete, onDeleteClick }) {
+function DonorTable({ donors, canEdit, canDelete, onDeleteClick }) {
+  const hasActions = canEdit || canDelete;
+
   return (
     <div className="table-wrapper">
       <table className="table">
@@ -20,7 +23,7 @@ function DonorTable({ donors, canDelete, onDeleteClick }) {
             <th scope="col">{LABELS.COLUMN_NAME}</th>
             <th scope="col">{LABELS.COLUMN_BLOOD_GROUP}</th>
             <th scope="col">{LABELS.COLUMN_PHONE}</th>
-            {canDelete && <th scope="col">{LABELS.COLUMN_ACTIONS}</th>}
+            {hasActions && <th scope="col">{LABELS.COLUMN_ACTIONS}</th>}
           </tr>
         </thead>
         <tbody>
@@ -33,15 +36,26 @@ function DonorTable({ donors, canDelete, onDeleteClick }) {
                 <span className="badge">{donor.bloodGroup}</span>
               </td>
               <td>{donor.phone}</td>
-              {canDelete && (
-                <td>
-                  <Button
-                    variant="danger"
-                    onClick={() => onDeleteClick(donor)}
-                    ariaLabel={LABELS.deleteDonorAriaLabel(donor.name)}
-                  >
-                    {LABELS.DELETE}
-                  </Button>
+              {hasActions && (
+                <td className="table__actions">
+                  {canEdit && (
+                    <Link
+                      to={getDonorEditPath(donor.id)}
+                      className="button button--secondary"
+                      aria-label={LABELS.editDonorAriaLabel(donor.name)}
+                    >
+                      {LABELS.EDIT}
+                    </Link>
+                  )}
+                  {canDelete && (
+                    <Button
+                      variant="danger"
+                      onClick={() => onDeleteClick(donor)}
+                      ariaLabel={LABELS.deleteDonorAriaLabel(donor.name)}
+                    >
+                      {LABELS.DELETE}
+                    </Button>
+                  )}
                 </td>
               )}
             </tr>
@@ -61,6 +75,7 @@ DonorTable.propTypes = {
       phone: PropTypes.string.isRequired,
     }),
   ).isRequired,
+  canEdit: PropTypes.bool.isRequired,
   canDelete: PropTypes.bool.isRequired,
   onDeleteClick: PropTypes.func.isRequired,
 };

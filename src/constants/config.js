@@ -7,6 +7,12 @@ export const APP_CONFIG = {
   // Wait until the user stops typing before searching, instead of calling the API per keystroke.
   SEARCH_DEBOUNCE_MS: 400,
   DATE_LOCALE: 'en-IN',
+  TOAST_DURATION_MS: 4000,
+};
+
+export const TOAST_TYPES = {
+  SUCCESS: 'success',
+  ERROR: 'error',
 };
 
 export const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];

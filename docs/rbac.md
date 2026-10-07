@@ -101,6 +101,13 @@ function DonorRow({ donor }) {
 }
 ```
 
+## "Owner" rule
+
+Some apps let a record's owner edit or delete it. Here a donor record isn't linked to a login account yet
+(staff enter donors), so donor CRUD uses role permissions only: ADMIN/STAFF create and edit, ADMIN deletes. When
+donors get accounts, the backend can add an ownership check (`donor.userId == currentUser.id`), and
+`useDonorPermissions` can then allow DONOR users to edit their own profile.
+
 ## Open questions for the team
 
 1. Should a DONOR be able to log in at all in phase 1, or is the app staff-only for now?

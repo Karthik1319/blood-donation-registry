@@ -3,10 +3,9 @@
 React (Vite, JavaScript) frontend for the Blood Donation Registry.
 Scope so far: project structure, shared Page Layout (Header + Footer), Login and Registration forms with Zod
 validation, API connection, secure token handling, **RBAC with protected/role-based routes**, and the
-**Donors list** (search, blood-group filter, pagination, Admin-only delete), a **dashboard layout** with a
-role-based sidebar, **Donor details** (with donation history) and an Admin-only **Users** page.
-The Spring Boot backend is not built yet. Set `VITE_USE_MOCK_API` to choose between the real API and a fake
-backend that runs in the browser (see below).
+**Donors list** (search, blood-group filter, pagination), a **dashboard layout** with a role-based sidebar,
+**Donor details** (with donation history), an Admin-only **Users** page, and **full donor CRUD** (one Zod form for
+add/edit, delete confirmation, success/error toasts).
 
 Research notes: [`docs/token-storage.md`](docs/token-storage.md) (where to keep the token) and
 [`docs/rbac.md`](docs/rbac.md) (roles and where they are enforced).
@@ -62,6 +61,8 @@ All paths are under `/api`. JSON in and out. Errors never need a body; the front
 | `GET /api/donors/{id}` | none (Bearer token) | `200 Donor` | `404` not found |
 | `GET /api/donors/{id}/donations` | none (Bearer token) | `200 Donation[]`, newest first | `404` donor not found |
 | `GET /api/users` | none (Bearer token, ADMIN only) | `200 [{ id, fullName, email, role }]` | `403` no permission |
+| `POST /api/donors` | `{ name, bloodGroup, phone }` (ADMIN, STAFF) | `201 Donor` | `409` phone already used, `403` no permission |
+| `PUT /api/donors/{id}` | `{ name, bloodGroup, phone }` (ADMIN, STAFF) | `200 Donor` | `409` phone already used, `404` not found |
 | `DELETE /api/donors/{id}` | none (Bearer token, ADMIN only) | `204` | `403` no permission, `404` not found |
 
 `Donor` = `{ id, name, bloodGroup, phone }`. `Donation` = `{ id, donationDate: "YYYY-MM-DD", quantity (ml), location }`. `page` starts at 0 (Spring Data style); empty filters are not sent.
@@ -112,13 +113,15 @@ src/
 │   ├── ui/                   # Reusable, presentational only (no business logic, no text)
 │   │   ├── Button.jsx  Input.jsx  Select.jsx  FormField.jsx
 │   │   ├── Card.jsx  Alert.jsx  PasswordChecklist.jsx  LoadingMessage.jsx
-│   │   ├── AsyncContent.jsx  Pagination.jsx  ConfirmDialog.jsx
+│   │   ├── AsyncContent.jsx  Pagination.jsx  ConfirmDialog.jsx  ToastList.jsx
 │   │   ├── PageHeader.jsx (title + breadcrumbs + tab title)
 │   └── layout/               # PublicLayout + PublicHeader; DashboardLayout + Sidebar + Topbar; Footer
 ├── features/auth/            # Login/Registration forms, Zod schemas, ProtectedRoute, GuestRoute, RoleRoute
-├── features/donors/          # useDonors, DonorFilters, DonorTable, DeleteDonorDialog, DonorSummary, DonationTable
+├── features/donors/          # DonorForm + donorSchema (add/edit), DonorTable, DonorFilters, DeleteDonorDialog,
+│                             # DonorSummary, DonationTable, useDonors, useDonorPermissions
+├── schemas/fieldSchemas.js   # Zod rules shared by forms (name, email, phone, blood group)
 ├── features/users/           # UserTable
-├── pages/                    # Login, Register, Dashboard, DonorList, DonorDetails, Users, AccessDenied
+├── pages/                    # Login, Register, Dashboard, DonorList, DonorDetails, DonorForm, Users, AccessDenied
 ├── services/                 # The ONLY place that talks to the API
 │   ├── apiClient.js          # Axios instance + request/response interceptors (token, 401 refresh, errors)
 │   ├── authService.js        # login, register, refresh, logout
@@ -130,8 +133,8 @@ src/
 │   ├── mockSession.js        # Fake tokens, idle timeout, withAuth (401/403 like Spring Security)
 │   ├── *Handlers.js          # Fake endpoints for auth, donors, users
 │   └── data/                 # Fake users, donors, donations
-├── hooks/                    # useForm, useAuth, useFetch (loading/error/reload), useDebouncedValue, useDocumentTitle
-├── context/                  # AuthContext + AuthProvider
+├── hooks/                    # useForm, useAuth, useFetch, useToast, useNotifiedAction, useDebouncedValue, useDocumentTitle
+├── context/                  # AuthContext + AuthProvider, ToastContext + ToastProvider
 ├── utils/                    # Small pure helpers (getFieldErrors, getErrorId, hasRole, hasPermission, removeEmptyValues, formatDate)
 ├── styles/                   # tokens.css (design tokens) + global.css (classes)
 └── test/setup.js             # Test setup (jest-dom matchers, cleanup)
@@ -151,18 +154,23 @@ Client-side validation is for user experience only; the Spring Boot API must val
 
 ## Routes, layouts and roles
 
-| Route                    | Layout          | Who can open it                                | Guard                          |
-| ------------------------ | --------------- | ---------------------------------------------- | ------------------------------ |
-| `/login`, `/register`    | PublicLayout    | Logged-out users only (others go to Dashboard) | `GuestRoute`                   |
-| `/` Dashboard            | DashboardLayout | Any logged-in user                             | `ProtectedRoute`               |
-| `/donors`, `/donors/:id` | DashboardLayout | ADMIN, STAFF (DONOR sees the 403 page)         | `ProtectedRoute` + `RoleRoute` |
-| `/users`                 | DashboardLayout | ADMIN only                                     | `ProtectedRoute` + `RoleRoute` |
+| Route                             | Layout          | Who can open it                                | Guard                          |
+| --------------------------------- | --------------- | ---------------------------------------------- | ------------------------------ |
+| `/login`, `/register`             | PublicLayout    | Logged-out users only (others go to Dashboard) | `GuestRoute`                   |
+| `/` Dashboard                     | DashboardLayout | Any logged-in user                             | `ProtectedRoute`               |
+| `/donors`, `/donors/:id`          | DashboardLayout | ADMIN, STAFF (DONOR sees the 403 page)         | `ProtectedRoute` + `RoleRoute` |
+| `/donors/new`, `/donors/:id/edit` | DashboardLayout | ADMIN, STAFF (same `DonorFormPage`)            | `ProtectedRoute` + `RoleRoute` |
+| `/users`                          | DashboardLayout | ADMIN only                                     | `ProtectedRoute` + `RoleRoute` |
 
 **Adding a page to the menu:** add the route to `ROUTES`, its roles to `ROUTE_ROLES` (if restricted), and one line
 to `NAV_ITEMS` in `constants/navigation.js`. The sidebar and the route guard both read `ROUTE_ROLES`, so they
 can't disagree. The active page is highlighted with `NavLink` (bold + background + left bar + `aria-current`).
 
 On screens under 768px the sidebar is hidden behind a ☰ button; it closes on link click, backdrop click or Esc.
+
+**Donor actions:** Add and Edit for ADMIN and STAFF, Delete for ADMIN only (`useDonorPermissions`). The fake
+backend enforces the same rules, so a forbidden call gets 403 even if someone bypasses the UI.
+Every create, update and delete shows a **toast** (success, or the API's error) via `useNotifiedAction`.
 
 Pages and menu items are controlled by **role** (`ROUTE_ROLES`, `hasRole`); actions such as the **Delete** button
 by **permission** (`ROLE_PERMISSIONS`, `hasPermission`), shown to ADMIN only.
@@ -189,4 +197,4 @@ Hiding things in the UI is UX, NOT security: the API must enforce the same rules
 ## Next steps
 
 - Build the Spring Boot backend following the API contract above, then set `VITE_USE_MOCK_API=false`.
-- Donation create/edit form with the 90-day eligibility rule, in `features/donations`.
+- Donation create/edit with the 90-day eligibility rule, in `features/donations` (reusing `useForm` and `useNotifiedAction`).

@@ -5,13 +5,14 @@ import { MOCK_CONFIG } from '@/mocks/mockConfig';
 import { startMockServer } from '@/mocks/mockServer';
 import { apiClient, setUnauthorizedHandler } from '@/services/apiClient';
 import { loginUser, refreshSession } from '@/services/authService';
-import { deleteDonor, getDonors } from '@/services/donorService';
+import { createDonor, deleteDonor, getDonors, updateDonor } from '@/services/donorService';
 import { getUsers } from '@/services/userService';
 import { setAccessToken } from '@/services/tokenStorage';
 
 // Runs the real services → Axios interceptors → fake backend, like the app does in mock mode.
 
 const STAFF = { email: 'staff@blood.org', password: 'Staff@123' };
+const DONOR_USER = { email: 'donor@blood.org', password: 'Donor@123' };
 const PAGE = { page: 0, size: 5 };
 
 async function logInAs(credentials) {
@@ -66,5 +67,23 @@ describe('mock backend through the real API layer', () => {
     vi.setSystemTime(Date.now() + MOCK_CONFIG.IDLE_TIMEOUT_MS + 1);
     await expect(refreshSession()).rejects.toMatchObject({ status: HTTP_STATUS.UNAUTHORIZED });
     await expect(getDonors(PAGE)).rejects.toThrow(MESSAGES.SESSION_EXPIRED);
+  });
+
+  it('lets Staff create and update donors, and rejects a duplicate phone (409)', async () => {
+    await logInAs(STAFF);
+    const created = await createDonor({ name: 'Asha Rao', bloodGroup: 'A+', phone: '9111111111' });
+    expect(created).toEqual(expect.objectContaining({ id: expect.any(Number), name: 'Asha Rao' }));
+    const updated = await updateDonor(created.id, { ...created, bloodGroup: 'O-' });
+    expect(updated.bloodGroup).toBe('O-');
+    await expect(
+      createDonor({ name: 'Copy Cat', bloodGroup: 'B+', phone: '9111111111' }),
+    ).rejects.toThrow(MESSAGES.DONOR_PHONE_TAKEN);
+  });
+
+  it('does not let a Donor account create donors (403)', async () => {
+    await logInAs(DONOR_USER);
+    await expect(
+      createDonor({ name: 'Not Allowed', bloodGroup: 'B+', phone: '9222222222' }),
+    ).rejects.toMatchObject({ status: HTTP_STATUS.FORBIDDEN });
   });
 });

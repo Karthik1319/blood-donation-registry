@@ -59,4 +59,16 @@ describe('DonorListPage', () => {
     expect(await screen.findByText('Unable to reach the server.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: LABELS.RETRY })).toBeInTheDocument();
   });
+
+  it('shows Add donor and Edit to Staff, but not Delete', async () => {
+    getDonors.mockResolvedValue(ONE_DONOR_PAGE);
+    renderAs(ROLES.STAFF);
+    expect(screen.getByRole('link', { name: LABELS.ADD_DONOR })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('link', { name: LABELS.editDonorAriaLabel('Ravi Kumar') }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: LABELS.deleteDonorAriaLabel('Ravi Kumar') }),
+    ).not.toBeInTheDocument();
+  });
 });

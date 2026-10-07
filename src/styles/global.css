@@ -540,3 +540,77 @@ a.button {
     display: inline-block;
   }
 }
+
+/* ---------- Day 5: page actions, form buttons, table actions ---------- */
+.page-header__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.form__actions {
+  display: flex;
+  gap: var(--space-sm);
+  justify-content: flex-end;
+}
+
+.table__actions {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+/* Inside the dashboard, cards line up with the page heading instead of being centered. */
+.dashboard__content .card {
+  margin: 0;
+}
+
+/* ---------- Toasts ---------- */
+.toast-list {
+  position: fixed;
+  right: var(--space-md);
+  bottom: var(--space-md);
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  width: min(24rem, calc(100% - 2 * var(--space-md)));
+}
+
+.toast {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: flex-start;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--color-surface);
+  border-left: 4px solid;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.toast--success {
+  color: var(--color-success);
+  border-color: var(--color-success);
+}
+
+.toast--error {
+  color: var(--color-error);
+  border-color: var(--color-error);
+}
+
+.toast__message {
+  flex: 1;
+  margin: 0;
+  color: var(--color-text);
+}
+
+.toast__close {
+  padding: 0 var(--space-xs);
+  font-size: var(--font-size-lg);
+  line-height: 1;
+  color: var(--color-text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+}

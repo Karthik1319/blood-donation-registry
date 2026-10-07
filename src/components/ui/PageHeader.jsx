@@ -10,8 +10,15 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle';
  * @param {{to: string, label: string}[]} [props.breadcrumbs] - earlier steps, from BREADCRUMBS.
  * @param {string} [props.breadcrumbLabel] - name of the breadcrumb landmark for screen readers.
  * @param {string} [props.subtitle] - short description under the heading.
+ * @param {React.ReactNode} [props.actions] - buttons/links shown next to the heading.
  */
-function PageHeader({ title, breadcrumbs = [], breadcrumbLabel = '', subtitle = '' }) {
+function PageHeader({
+  title,
+  breadcrumbs = [],
+  breadcrumbLabel = '',
+  subtitle = '',
+  actions = null,
+}) {
   useDocumentTitle(title);
 
   return (
@@ -28,7 +35,10 @@ function PageHeader({ title, breadcrumbs = [], breadcrumbLabel = '', subtitle = 
           </ol>
         </nav>
       )}
-      <h1 className="page-header__title">{title}</h1>
+      <div className="page-header__row">
+        <h1 className="page-header__title">{title}</h1>
+        {actions}
+      </div>
       {subtitle && <p className="page-header__subtitle">{subtitle}</p>}
     </div>
   );
@@ -41,6 +51,7 @@ PageHeader.propTypes = {
   ),
   breadcrumbLabel: PropTypes.string,
   subtitle: PropTypes.string,
+  actions: PropTypes.node,
 };
 
 export default PageHeader;

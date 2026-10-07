@@ -14,49 +14,74 @@ function findDonor(url, pattern) {
   return donors.find((donor) => donor.id === id);
 }
 
-function getDonorPage({ page = 0, size, search = '', bloodGroup }) {
+function isPhoneTaken(phone, exceptId) {
+  return donors.some((donor) => donor.phone === phone && donor.id !== exceptId);
+}
+
+function listDonors(config) {
+  const { page = 0, size, search = '', bloodGroup } = config.params;
   const searchText = search.trim().toLowerCase();
   const filtered = donors.filter(
     (donor) =>
       (donor.name.toLowerCase().includes(searchText) || donor.phone.includes(searchText)) &&
       (!bloodGroup || donor.bloodGroup === bloodGroup),
   );
-  const start = page * size;
-  return {
-    content: filtered.slice(start, start + size),
-    totalElements: filtered.length,
-    totalPages: Math.ceil(filtered.length / size),
-  };
+  // Sorted by name so a new donor appears in a predictable place.
+  const sorted = [...filtered].sort((a, b) => a.name.localeCompare(b.name));
+  const content = sorted.slice(page * size, (page + 1) * size);
+  const totalPages = Math.ceil(sorted.length / size);
+  return [HTTP_STATUS.OK, { content, totalElements: sorted.length, totalPages }];
 }
 
-/** Fake /donors endpoints. Reads: ADMIN and STAFF. Delete: ADMIN only. */
+function getDonor(config) {
+  const donor = findDonor(config.url, DONOR_URL);
+  return donor ? [HTTP_STATUS.OK, donor] : [HTTP_STATUS.NOT_FOUND];
+}
+
+function listDonations(config) {
+  const donor = findDonor(config.url, DONATIONS_URL);
+  return donor ? [HTTP_STATUS.OK, MOCK_DONATIONS[donor.id] ?? []] : [HTTP_STATUS.NOT_FOUND];
+}
+
+function createDonor(config) {
+  const { name, bloodGroup, phone } = JSON.parse(config.data);
+  if (isPhoneTaken(phone)) {
+    return [HTTP_STATUS.CONFLICT];
+  }
+  const donor = { id: Math.max(0, ...donors.map((d) => d.id)) + 1, name, bloodGroup, phone };
+  donors = [...donors, donor];
+  return [HTTP_STATUS.CREATED, donor];
+}
+
+function updateDonor(config) {
+  const donor = findDonor(config.url, DONOR_URL);
+  if (!donor) {
+    return [HTTP_STATUS.NOT_FOUND];
+  }
+  const { name, bloodGroup, phone } = JSON.parse(config.data);
+  if (isPhoneTaken(phone, donor.id)) {
+    return [HTTP_STATUS.CONFLICT];
+  }
+  const updated = { ...donor, name, bloodGroup, phone };
+  donors = donors.map((d) => (d.id === donor.id ? updated : d));
+  return [HTTP_STATUS.OK, updated];
+}
+
+function deleteDonor(config) {
+  const donor = findDonor(config.url, DONOR_URL);
+  if (!donor) {
+    return [HTTP_STATUS.NOT_FOUND];
+  }
+  donors = donors.filter((d) => d.id !== donor.id);
+  return [HTTP_STATUS.NO_CONTENT];
+}
+
+/** Fake /donors endpoints. Read/create/update: ADMIN and STAFF. Delete: ADMIN only. */
 export function registerDonorHandlers(mock) {
-  mock
-    .onGet(API_ENDPOINTS.DONORS)
-    .reply(withAuth(ROUTE_ROLES.DONORS, (config) => [HTTP_STATUS.OK, getDonorPage(config.params)]));
-
-  mock.onGet(DONOR_URL).reply(
-    withAuth(ROUTE_ROLES.DONORS, (config) => {
-      const donor = findDonor(config.url, DONOR_URL);
-      return donor ? [HTTP_STATUS.OK, donor] : [HTTP_STATUS.NOT_FOUND];
-    }),
-  );
-
-  mock.onGet(DONATIONS_URL).reply(
-    withAuth(ROUTE_ROLES.DONORS, (config) => {
-      const donor = findDonor(config.url, DONATIONS_URL);
-      return donor ? [HTTP_STATUS.OK, MOCK_DONATIONS[donor.id] ?? []] : [HTTP_STATUS.NOT_FOUND];
-    }),
-  );
-
-  mock.onDelete(DONOR_URL).reply(
-    withAuth([ROLES.ADMIN], (config) => {
-      const donor = findDonor(config.url, DONOR_URL);
-      if (!donor) {
-        return [HTTP_STATUS.NOT_FOUND];
-      }
-      donors = donors.filter((d) => d.id !== donor.id);
-      return [HTTP_STATUS.NO_CONTENT];
-    }),
-  );
+  mock.onGet(API_ENDPOINTS.DONORS).reply(withAuth(ROUTE_ROLES.DONORS, listDonors));
+  mock.onGet(DONOR_URL).reply(withAuth(ROUTE_ROLES.DONORS, getDonor));
+  mock.onGet(DONATIONS_URL).reply(withAuth(ROUTE_ROLES.DONORS, listDonations));
+  mock.onPost(API_ENDPOINTS.DONORS).reply(withAuth(ROUTE_ROLES.DONOR_FORM, createDonor));
+  mock.onPut(DONOR_URL).reply(withAuth(ROUTE_ROLES.DONOR_FORM, updateDonor));
+  mock.onDelete(DONOR_URL).reply(withAuth([ROLES.ADMIN], deleteDonor));
 }

@@ -28,6 +28,7 @@ export const MESSAGES = {
   // Server / request results
   LOGIN_FAILED: 'Invalid email or password',
   EMAIL_TAKEN: 'An account with this email already exists',
+  DONOR_PHONE_TAKEN: 'Another donor already uses this phone number',
   REGISTER_SUCCESS: 'Registration successful. Please log in.',
   GENERIC_ERROR: 'Something went wrong. Please try again.',
   NETWORK_ERROR: 'Unable to reach the server. Check your connection and try again.',

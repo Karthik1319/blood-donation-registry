@@ -8,7 +8,9 @@ import GuestRoute from '@/features/auth/GuestRoute';
 import ProtectedRoute from '@/features/auth/ProtectedRoute';
 import RoleRoute from '@/features/auth/RoleRoute';
 import DashboardPage from '@/pages/DashboardPage';
+import ToastProvider from '@/context/ToastProvider';
 import DonorDetailsPage from '@/pages/DonorDetailsPage';
+import DonorFormPage from '@/pages/DonorFormPage';
 import DonorListPage from '@/pages/DonorListPage';
 import LoginPage from '@/pages/LoginPage';
 import RegisterPage from '@/pages/RegisterPage';
@@ -17,31 +19,38 @@ import UsersPage from '@/pages/UsersPage';
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          {/* Logged-out pages: simple header + footer. */}
-          <Route element={<PublicLayout />}>
-            <Route element={<GuestRoute />}>
-              <Route path={ROUTES.LOGIN} element={<LoginPage />} />
-              <Route path={ROUTES.REGISTER} element={<RegisterPage />} />
-            </Route>
-          </Route>
-          {/* Logged-in pages: sidebar + topbar. */}
-          <Route element={<ProtectedRoute />}>
-            <Route element={<DashboardLayout />}>
-              <Route path={ROUTES.DASHBOARD} element={<DashboardPage />} />
-              <Route element={<RoleRoute allowedRoles={ROUTE_ROLES.DONORS} />}>
-                <Route path={ROUTES.DONORS} element={<DonorListPage />} />
-                <Route path={ROUTES.DONOR_DETAILS} element={<DonorDetailsPage />} />
-              </Route>
-              <Route element={<RoleRoute allowedRoles={ROUTE_ROLES.USERS} />}>
-                <Route path={ROUTES.USERS} element={<UsersPage />} />
+      <ToastProvider>
+        <BrowserRouter>
+          <Routes>
+            {/* Logged-out pages: simple header + footer. */}
+            <Route element={<PublicLayout />}>
+              <Route element={<GuestRoute />}>
+                <Route path={ROUTES.LOGIN} element={<LoginPage />} />
+                <Route path={ROUTES.REGISTER} element={<RegisterPage />} />
               </Route>
             </Route>
-          </Route>
-          <Route path="*" element={<Navigate to={ROUTES.DASHBOARD} replace />} />
-        </Routes>
-      </BrowserRouter>
+            {/* Logged-in pages: sidebar + topbar. */}
+            <Route element={<ProtectedRoute />}>
+              <Route element={<DashboardLayout />}>
+                <Route path={ROUTES.DASHBOARD} element={<DashboardPage />} />
+                <Route element={<RoleRoute allowedRoles={ROUTE_ROLES.DONORS} />}>
+                  <Route path={ROUTES.DONORS} element={<DonorListPage />} />
+                  <Route path={ROUTES.DONOR_DETAILS} element={<DonorDetailsPage />} />
+                </Route>
+                <Route element={<RoleRoute allowedRoles={ROUTE_ROLES.DONOR_FORM} />}>
+                  {/* Same page for both: an :id in the URL means edit mode. */}
+                  <Route path={ROUTES.DONOR_NEW} element={<DonorFormPage />} />
+                  <Route path={ROUTES.DONOR_EDIT} element={<DonorFormPage />} />
+                </Route>
+                <Route element={<RoleRoute allowedRoles={ROUTE_ROLES.USERS} />}>
+                  <Route path={ROUTES.USERS} element={<UsersPage />} />
+                </Route>
+              </Route>
+            </Route>
+            <Route path="*" element={<Navigate to={ROUTES.DASHBOARD} replace />} />
+          </Routes>
+        </BrowserRouter>
+      </ToastProvider>
     </AuthProvider>
   );
 }

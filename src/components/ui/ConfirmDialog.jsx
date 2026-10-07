@@ -1,6 +1,5 @@
 import { useEffect, useId, useRef } from 'react';
 import PropTypes from 'prop-types';
-import Alert from '@/components/ui/Alert';
 import Button from '@/components/ui/Button';
 
 /**
@@ -16,7 +15,6 @@ import Button from '@/components/ui/Button';
  * @param {Function} props.onConfirm - runs the action.
  * @param {Function} props.onCancel - closes the dialog without doing anything.
  * @param {boolean} [props.isConfirming] - true while the action runs; blocks closing.
- * @param {string} [props.error] - error from the action, shown inside the dialog.
  */
 function ConfirmDialog({
   title,
@@ -27,7 +25,6 @@ function ConfirmDialog({
   onConfirm,
   onCancel,
   isConfirming = false,
-  error = '',
 }) {
   const dialogRef = useRef(null);
   const titleId = useId();
@@ -58,7 +55,6 @@ function ConfirmDialog({
         {title}
       </h2>
       <p>{message}</p>
-      <Alert message={error} />
       <div className="dialog__actions">
         <Button variant="secondary" onClick={onCancel} isDisabled={isConfirming}>
           {cancelLabel}
@@ -85,7 +81,6 @@ ConfirmDialog.propTypes = {
   onConfirm: PropTypes.func.isRequired,
   onCancel: PropTypes.func.isRequired,
   isConfirming: PropTypes.bool,
-  error: PropTypes.string,
 };
 
 export default ConfirmDialog;

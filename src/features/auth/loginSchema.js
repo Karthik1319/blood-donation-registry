@@ -1,13 +1,9 @@
 import { z } from 'zod';
 import { MESSAGES } from '@/constants/messages';
-import { PATTERNS } from '@/constants/validation';
+import { emailField } from '@/schemas/fieldSchemas';
 
 export const loginSchema = z.object({
-  email: z
-    .string()
-    .trim()
-    .min(1, MESSAGES.EMAIL_REQUIRED)
-    .regex(PATTERNS.EMAIL, MESSAGES.EMAIL_INVALID),
+  email: emailField,
   // Only "required" here: password strength rules belong to registration, and the server decides
   // whether the credentials are correct.
   password: z.string().min(1, MESSAGES.PASSWORD_REQUIRED),

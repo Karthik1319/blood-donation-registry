@@ -1,18 +1,21 @@
 import { useCallback } from 'react';
-import { useParams } from 'react-router';
+import { Link, useParams } from 'react-router';
 import AsyncContent from '@/components/ui/AsyncContent';
 import Card from '@/components/ui/Card';
 import PageHeader from '@/components/ui/PageHeader';
 import { LABELS } from '@/constants/labels';
 import { MESSAGES } from '@/constants/messages';
 import { BREADCRUMBS } from '@/constants/navigation';
+import { getDonorEditPath } from '@/constants/routes';
 import DonationTable from '@/features/donors/DonationTable';
 import DonorSummary from '@/features/donors/DonorSummary';
+import { useDonorPermissions } from '@/features/donors/useDonorPermissions';
 import { useFetch } from '@/hooks/useFetch';
 import { getDonorById, getDonorDonations } from '@/services/donorService';
 
 function DonorDetailsPage() {
   const { id } = useParams();
+  const { canEdit } = useDonorPermissions();
   const fetchDonor = useCallback(() => getDonorById(id), [id]);
   const fetchDonations = useCallback(() => getDonorDonations(id), [id]);
   const donorRequest = useFetch(fetchDonor);
@@ -26,6 +29,14 @@ function DonorDetailsPage() {
         title={donor?.name ?? LABELS.DONOR_DETAILS_TITLE}
         breadcrumbs={[BREADCRUMBS.DASHBOARD, BREADCRUMBS.DONORS]}
         breadcrumbLabel={LABELS.BREADCRUMB}
+        actions={
+          canEdit &&
+          donor && (
+            <Link to={getDonorEditPath(donor.id)} className="button button--primary">
+              {LABELS.EDIT}
+            </Link>
+          )
+        }
       />
       <AsyncContent
         isLoading={donorRequest.isLoading}
