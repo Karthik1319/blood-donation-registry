@@ -2,8 +2,8 @@ import { LIMITS } from '@/constants/limits';
 import { addDays, daysBetween } from '@/utils/dateUtils';
 
 // The project's edge case: a donor must wait MIN_DAYS_BETWEEN_DONATIONS (90) days between
-// donations. Used by the donation form, the eligibility banner AND the fake backend, so all agree.
-// The real Spring Boot API must apply the same rule; the UI check is only for fast feedback.
+// donations. Used by the donation form and the eligibility banner for fast feedback. The backend
+// applies the same rule (DonationEligibility.java) and has the final say.
 
 /**
  * Returns the existing donation that is less than 90 days away from `donationDate` (before OR

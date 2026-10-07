@@ -1,0 +1,23 @@
+# Local PostgreSQL for development. Start: docker compose up -d   Stop: docker compose down
+# Values come from backend/.env (copy .env.example first); no passwords are written here.
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: blood_donation
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      # Bound to 127.0.0.1 only, so other machines on the network can't reach the database.
+      - '127.0.0.1:5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USERNAME} -d blood_donation']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  # Keeps the data when the container is removed. "docker compose down -v" deletes it.
+  pgdata:

@@ -1,0 +1,5 @@
+# Used by tests (@ActiveProfiles("test")). The database comes from Testcontainers.
+app:
+  demo-data: false
+  security:
+    jwt-secret: test-only-secret-that-is-at-least-32-characters-long

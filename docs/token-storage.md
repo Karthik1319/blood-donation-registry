@@ -55,8 +55,8 @@ who can then use the token from their own machine until it expires.
 
 The Axios response interceptor in `src/services/apiClient.js` handles this in one place: a 401 from a normal
 request triggers one `/auth/refresh` and a retry. If the refresh also fails (session over, token revoked),
-the user is logged out and the Login page says "Your session has expired". In mock mode the fake backend makes
-access tokens expire after 1 minute and ends idle sessions after 3 minutes, so both paths can be demonstrated.
+the user is logged out and the Login page says "Your session has expired". To demonstrate both paths, start the
+backend with short lifetimes (see "Testing the session timeout quickly" in the README).
 
 ## Limits to be honest about
 

@@ -1,0 +1,32 @@
+spring:
+  application:
+    name: blood-donation-registry
+  config:
+    # Reads backend/.env (same file docker compose uses), if it exists.
+    import: optional:file:.env[.properties]
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/blood_donation}
+    username: ${DB_USERNAME:}
+    password: ${DB_PASSWORD:}
+  jpa:
+    # Tables are created only by Flyway migrations; Hibernate just checks they match the entities.
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+server:
+  port: 8080
+  error:
+    # Never send stack traces or exception details to the client.
+    include-stacktrace: never
+    include-message: never
+
+app:
+  demo-data: ${DEMO_DATA:false}
+  security:
+    jwt-secret: ${JWT_SECRET:}
+    access-token-ttl: 15m
+    # Idle timeout: each refresh issues a new refresh token, so the session ends after this long without use.
+    refresh-token-ttl: 30m
+    # Browsers accept Secure cookies on http://localhost; set false only for other plain-http hosts.
+    refresh-cookie-secure: true

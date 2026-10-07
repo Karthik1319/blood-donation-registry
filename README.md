@@ -1,11 +1,11 @@
-# Blood Donation Registry: Frontend
+# Blood Donation Registry
 
 A web app for a blood bank to keep a register of **donors** and their **blood donations**. Staff record donors and
 donations; the app enforces the medical rule that a donor must wait **at least 90 days between donations**, and
 shows each donor's eligibility. Access is role-based: Admin, Staff and Donor accounts see and can do different things.
 
-Built with React (Vite, JavaScript). The Spring Boot backend is the next step; until then a fake backend runs inside
-the browser and answers the same HTTP requests (see [Mock API vs real API](#mock-api-vs-real-api)).
+Full stack: a **React** frontend (Vite, JavaScript) in this folder, and a **Spring Boot** API with **PostgreSQL** in
+[`backend/`](backend/README.md).
 
 ## Features
 
@@ -20,21 +20,28 @@ the browser and answers the same HTTP requests (see [Mock API vs real API](#mock
 
 ## Getting started
 
-Works the same on macOS and Windows.
-
-1. Install **Node.js 20 or newer** (24 LTS recommended, see `.nvmrc`) and **Git**.
-2. Clone and start:
+Works the same on macOS and Linux (and Windows with Docker). You need **Node.js 20+**, **Java 21**, **Docker with
+Compose** and **Git**.
 
 ```bash
 git clone https://github.com/Karthik1319/blood-donation-registry1.git
 cd blood-donation-registry1
-npm ci          # installs the exact versions from package-lock.json
-npm run dev     # open http://localhost:5173
+
+# 1. Backend (first time: create backend/.env, see backend/README.md)
+cd backend
+cp .env.example .env               # then set DB_PASSWORD and JWT_SECRET (openssl rand -base64 48)
+docker compose up -d               # PostgreSQL
+./mvnw spring-boot:run             # API on http://localhost:8080 (leave running)
+
+# 2. Frontend, in a second terminal
+cd blood-donation-registry1
+npm ci
+npm run dev                        # open http://localhost:5173
 ```
 
 ## Test login credentials
 
-Available in mock mode (`VITE_USE_MOCK_API=true`, the default):
+Created by the backend's demo data (`DEMO_DATA=true` in `backend/.env`):
 
 | Role  | Email             | Password    | Can do                                                        |
 | ----- | ----------------- | ----------- | ------------------------------------------------------------- |
@@ -42,31 +49,32 @@ Available in mock mode (`VITE_USE_MOCK_API=true`, the default):
 | Staff | `staff@blood.org` | `Staff@123` | View, add and edit donors and donations (no delete, no Users) |
 | Donor | `donor@blood.org` | `Donor@123` | Dashboard only (the Donors page shows 403)                    |
 
-New accounts from the Register page are always **Donor**. Mock data resets when the page reloads, and a reload also
-logs you out (there is no real cookie in mock mode).
+New accounts from the Register page are always **Donor**. With the real backend, data is kept in PostgreSQL and a
+page reload keeps you logged in.
 
 ## Environment variables
 
-Set in `.env.development` (loaded by `npm run dev`). `VITE_` variables are bundled into the browser and are
+Frontend: `.env.development` (used by `npm run dev`). Backend
+variables are listed in [`backend/README.md`](backend/README.md#environment-variables-backendenv-never-committed). `VITE_` variables are bundled into the browser and are
 **public**: never put secrets in them.
 
-| Variable            | Default | Meaning                                                                          |
-| ------------------- | ------- | -------------------------------------------------------------------------------- |
-| `VITE_API_BASE_URL` | `/api`  | Where API calls go. In development Vite forwards `/api` to `localhost:8080`.     |
-| `VITE_USE_MOCK_API` | `true`  | `true`: fake backend in the browser. `false`: real Spring Boot API on port 8080. |
+| Variable            | Default | Meaning                                                                      |
+| ------------------- | ------- | ---------------------------------------------------------------------------- |
+| `VITE_API_BASE_URL` | `/api`  | Where API calls go. In development Vite forwards `/api` to `localhost:8080`. |
 
 Restart `npm run dev` after changing them.
 
 ## Scripts
 
-| Command                | What it does                                                    |
-| ---------------------- | --------------------------------------------------------------- |
-| `npm run dev`          | Start the dev server                                            |
-| `npm run check`        | **Quality gate**: lint, format check, tests and build in one go |
-| `npm run lint`         | ESLint; fails on any error or warning                           |
-| `npm run format:check` | Prettier formatting check (`npm run format` fixes it)           |
-| `npm test`             | Run all tests once (`npm run test:watch` while coding)          |
-| `npm run build`        | Production build into `dist/`                                   |
+| Command                  | What it does                                                    |
+| ------------------------ | --------------------------------------------------------------- |
+| `npm run dev`            | Start the frontend against the real backend                     |
+| `./mvnw test` (backend/) | Backend tests (real PostgreSQL via Testcontainers)              |
+| `npm run check`          | **Quality gate**: lint, format check, tests and build in one go |
+| `npm run lint`           | ESLint; fails on any error or warning                           |
+| `npm run format:check`   | Prettier formatting check (`npm run format` fixes it)           |
+| `npm test`               | Run all tests once (`npm run test:watch` while coding)          |
+| `npm run build`          | Production build into `dist/`                                   |
 
 ## Roles, routes and permissions
 
@@ -89,8 +97,8 @@ Inside pages, **actions** are controlled by permissions (`ROLE_PERMISSIONS` in `
 | Add / edit donation |   ✓   |   ✓   |       |
 | Delete donation     |   ✓   |       |       |
 
-Hiding pages and buttons is for user experience only. The API checks the same rules on every request (the fake
-backend already does: a forbidden call gets **403**).
+Hiding pages and buttons is for user experience only. The Spring Boot API checks the same rules on every request
+(`backend/.../config/SecurityConfig.java`): a forbidden call gets **403**.
 
 ## The 90-day eligibility rule
 
@@ -101,19 +109,21 @@ A donor must wait at least 90 days between donations. The rule is written once, 
 2. **Donation form:** a date less than 90 days from _any_ other donation of that donor shows a live error and the
    form won't submit. Back-filled (older) dates are checked against later donations too, and an edited donation is
    not compared with itself.
-3. **Server:** rejects the same cases with **422**, shown as an error toast. The server has the final say.
+3. **Server:** `DonationEligibility.java` rejects the same cases with **422**, shown as an error toast. The server
+   has the final say, and locks the donor's row while saving so two parallel saves can't both pass.
 
-## Mock API vs real API
+## Testing the session timeout quickly
 
-With `VITE_USE_MOCK_API=true`, `src/mocks/` answers the Axios requests inside the browser, so the interceptors,
-tokens, 401 and 403 all run exactly as they will with Spring Boot. To demonstrate token expiry
-(`src/mocks/mockConfig.js`): access tokens expire after **1 minute** and are refreshed silently; after **3 minutes**
-without activity the session ends and the next click lands on Login with "Your session has expired".
+Start the backend with short lifetimes, log in, then wait:
 
-To use the real backend: start Spring Boot on `http://localhost:8080`, set `VITE_USE_MOCK_API=false` and restart
-`npm run dev`. The fake backend is then never downloaded.
+```bash
+./mvnw spring-boot:run -Dspring-boot.run.arguments="--app.security.access-token-ttl=1m --app.security.refresh-token-ttl=3m"
+```
 
-## API contract (for the Spring Boot backend)
+After 1 minute the next click still works (the token is refreshed silently); after 3 minutes without a click the
+next one lands on Login with "Your session has expired".
+
+## API contract
 
 All paths are under `/api`, JSON in and out, Bearer token on every non-auth call. Error responses need no body: the
 frontend shows its own safe message for each status.
@@ -145,8 +155,9 @@ frontend shows its own safe message for each status.
 ## Folder structure
 
 ```
+backend/                     # Spring Boot API: see backend/README.md
 src/
-├── main.jsx                 # Entry point (starts the fake backend first in mock mode)
+├── main.jsx                 # Entry point
 ├── App.jsx                  # All routes and their guards
 ├── constants/               # Every fixed value: routes, labels, messages, limits, roles, API paths, config
 ├── components/
@@ -162,7 +173,6 @@ src/
 ├── pages/                   # One component per route
 ├── services/                # The ONLY place that talks to the API: apiClient (Axios + interceptors),
 │                            # authService, donorService, donationService, userService, tokenStorage
-├── mocks/                   # Fake backend for mock mode (handlers, in-memory database, fake tokens)
 ├── hooks/                   # useForm, useFetch, useAuth, useToast, useNotifiedAction, useCrudPermissions, ...
 ├── context/                 # AuthProvider (logged-in user), ToastProvider (notifications)
 ├── schemas/                 # Zod field rules shared by several forms
@@ -172,6 +182,7 @@ src/
 
 ## Further reading
 
+- [`backend/README.md`](backend/README.md): backend setup, security and business rules
 - [`docs/walkthrough.md`](docs/walkthrough.md): review guide (structure, auth flow, RBAC, one feature end to end)
 - [`docs/token-storage.md`](docs/token-storage.md): why the token is kept in memory plus an HttpOnly cookie
 - [`docs/rbac.md`](docs/rbac.md): roles, permissions and where each rule is enforced
@@ -185,9 +196,11 @@ src/
 
 ## Troubleshooting
 
-| Problem                                               | Fix                                                                   |
-| ----------------------------------------------------- | --------------------------------------------------------------------- |
-| `Cannot find module @rollup/rollup-win32-x64-msvc`    | Delete `node_modules` and `package-lock.json`, then run `npm install` |
-| `format:check` fails on Windows only                  | Line endings: set `core.autocrlf false` and clone again               |
-| Every request fails with "Unable to reach the server" | `VITE_USE_MOCK_API=false` but Spring Boot isn't running on port 8080  |
-| Logged out after reloading the page                   | Expected in mock mode (no real refresh cookie)                        |
+| Problem                                               | Fix                                                                                      |
+| ----------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `Cannot find module @rollup/rollup-win32-x64-msvc`    | Delete `node_modules` and `package-lock.json`, then run `npm install`                    |
+| `format:check` fails on Windows only                  | Line endings: set `core.autocrlf false` and clone again                                  |
+| Every request fails with "Unable to reach the server" | Spring Boot isn't running: start it with `./mvnw spring-boot:run` in `backend/`          |
+| Backend won't start: "JWT_SECRET must be set"         | Create `backend/.env` from `.env.example` and set `JWT_SECRET`                           |
+| Backend can't connect to the database                 | Start PostgreSQL: `docker compose up -d` in `backend/`                                   |
+| Port 5432 already in use                              | Another PostgreSQL is running; stop it or change the port in `compose.yaml` and `DB_URL` |

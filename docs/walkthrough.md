@@ -65,23 +65,23 @@ Points to explain:
 
 Three roles: **Admin**, **Staff**, **Donor**. Rules are enforced in three layers:
 
-| Layer          | What it controls                      | Where                                                            |
-| -------------- | ------------------------------------- | ---------------------------------------------------------------- |
-| Pages and menu | Who can open a page / see a menu item | `ROUTE_ROLES` → `RoleRoute` (403 page) and `Sidebar` (`hasRole`) |
-| Buttons        | Who sees Add / Edit / Delete          | `ROLE_PERMISSIONS` → `useCrudPermissions` (`hasPermission`)      |
-| **Server**     | **What is actually allowed**          | Backend checks token + role on every request (401 / 403)         |
+| Layer          | What it controls                      | Where                                                                 |
+| -------------- | ------------------------------------- | --------------------------------------------------------------------- |
+| Pages and menu | Who can open a page / see a menu item | `ROUTE_ROLES` → `RoleRoute` (403 page) and `Sidebar` (`hasRole`)      |
+| Buttons        | Who sees Add / Edit / Delete          | `ROLE_PERMISSIONS` → `useCrudPermissions` (`hasPermission`)           |
+| **Server**     | **What is actually allowed**          | Spring Boot `SecurityConfig`: token + role on every request (401/403) |
 
 - The sidebar and the route guard read the **same** `ROUTE_ROLES` list, so a menu item and its page can never
   disagree.
-- Hiding a button is UX, not security. Every place that hides something says so in a comment. The fake backend
-  proves the server is the real gate: a Staff user calling delete directly gets **403**.
-- New registrations are always **Donor**; the frontend never sends a role.
+- Hiding a button is UX, not security. Every place that hides something says so in a comment. The backend proves
+  the server is the real gate: a Staff user calling delete directly gets **403**.
+- New registrations are always **Donor**: the frontend never sends a role, and the backend ignores one if sent.
 
 Demo: log in as Admin (sees Users, Delete), Staff (no Users, no Delete), Donor (Dashboard only; typing `/donors`
 shows the 403 page).
 
 **Open:** `constants/roles.js`, `features/auth/RoleRoute.jsx`, `components/layout/Sidebar.jsx`,
-`hooks/useCrudPermissions.js`, `mocks/mockSession.js` (`withAuth`).
+`hooks/useCrudPermissions.js`, backend `config/SecurityConfig.java`.
 
 ## 4. One feature end to end: "Add donation"
 
@@ -121,23 +121,25 @@ Step by step:
    "Not eligible" message.
 4. **API layer:** `apiClient` adds the Bearer token, refreshes on 401, and turns any failure into an `ApiError` with
    a safe message. Raw errors and stack traces never reach the screen (`getErrorMessage`).
-5. **Server:** checks the token, the role (Admin/Staff) and the 90-day rule again (`mocks/donationHandlers.js` now,
-   Spring Boot later), and answers 201, 400, 403 or 422.
+5. **Server:** Spring Boot checks the token and role (`SecurityConfig`), validates the body (`DonationRequest`),
+   locks the donor's row and applies the 90-day rule again (`DonationService` + `DonationEligibility`), saves to
+   PostgreSQL and answers 201, 400, 403 or 422.
 6. **Back in the UI:** on success the user returns to the donor page, which loads the list again, so the new
    donation and the updated eligibility banner appear.
 
 **Open:** `features/donations/DonationForm.jsx`, `features/donations/donationSchema.js`,
 `utils/donationEligibility.js`, `pages/DonationFormPage.jsx`, `hooks/useNotifiedAction.js`,
-`services/donationService.js`, `services/apiClient.js`, `mocks/donationHandlers.js`.
+`services/donationService.js`, `services/apiClient.js`, then backend `DonationController` → `DonationService` →
+`DonationEligibility`.
 
 ## 5. Questions a reviewer may ask
 
 **Why not localStorage for the token?** Any injected script can read it and send it away. Memory + HttpOnly cookie
 keeps the long-lived token out of JavaScript entirely.
 
-**Why a fake backend instead of hardcoded data?** It answers real HTTP requests, so the interceptors, tokens, 401,
-403 and 422 handling are the real code paths. Switching to Spring Boot is one setting
-(`VITE_USE_MOCK_API=false`).
+**How was the frontend built before the backend existed?** Against a temporary fake backend that answered the same
+HTTP requests (tokens, 401/403, 422), following the API contract in the README. Once Spring Boot implemented that
+contract, the fake was deleted and the frontend needed no code changes.
 
 **Where is the 90-day rule?** Once, in `utils/donationEligibility.js` (unit-tested), used by the form, the banner
 and the server. Exactly 90 days is allowed, 89 is not, and back-filled dates are checked too.
