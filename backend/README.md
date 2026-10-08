@@ -62,14 +62,14 @@ On Linux with Docker Engine nothing extra is needed.
 src/main/java/com/blooddonation/registry/
 ├── config/      SecurityConfig (who may call what), JwtConfig, AppSecurityProperties, ClockConfig
 ├── auth/        AuthController, AuthService, AccessTokenService (JWT), RefreshTokenService, RefreshCookies
-├── user/        AppUser, Role, UserRepository, UserController (GET /api/users)
+├── user/        AppUser, Role, UserService, UserController (list users, change role, enable/disable)
 ├── donor/       Donor, DonorRepository, DonorService, DonorController
 ├── donation/    Donation, DonationService, DonationController, DonationEligibility (the 90-day rule)
 ├── common/      ApiExceptionHandler (errors → HTTP status), exceptions, ValidationRules, PageResponse
 └── demo/        DemoDataSeeder (DEMO_DATA=true only)
 src/main/resources/
 ├── application.yaml
-└── db/migration/V1__create_tables.sql
+└── db/migration/      V1__create_tables.sql, V2__add_user_enabled.sql
 ```
 
 Each feature has the same layers: **Controller** (HTTP in/out, `@Valid`) → **Service** (rules, transactions) →
@@ -86,6 +86,9 @@ Each feature has the same layers: **Controller** (HTTP in/out, `@Valid`) → **S
   if an old one is ever used again, every session of that user is ended (theft detection).
 - **Passwords**: BCrypt. Login answers the same for "unknown email" and "wrong password", and takes the same time.
 - **Registration** always creates a DONOR; a `role` field in the request is ignored.
+- **Every request is checked against the database** (`CurrentUserAuthenticationConverter`): a disabled account is
+  refused immediately and the role comes from the database, so Admin changes on the Users page
+  (`PATCH /api/users/{id}`) take effect on the user's next request. Admins can't change their own account.
 - **Errors**: RFC 9457 problem-details JSON; stack traces and internal messages never reach the client.
 - **Database**: PostgreSQL is bound to 127.0.0.1 only; secrets come from `.env`, which Git ignores.
 

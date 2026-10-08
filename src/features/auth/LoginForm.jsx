@@ -11,13 +11,14 @@ import { loginUser } from '@/services/authService';
 
 function LoginForm() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, dismissSessionExpired } = useAuth();
   const { getFieldProps, handleSubmit, isSubmitting, submitError } = useForm(
     loginSchema,
     LOGIN_INITIAL_VALUES,
   );
 
   const submitLogin = async (credentials) => {
+    dismissSessionExpired();
     const session = await loginUser(credentials);
     login(session);
     navigate(ROUTES.DASHBOARD);

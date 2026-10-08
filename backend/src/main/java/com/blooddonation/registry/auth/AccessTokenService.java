@@ -35,6 +35,7 @@ public class AccessTokenService {
                 .subject(String.valueOf(user.getId()))
                 .issuedAt(now)
                 .expiresAt(now.plus(properties.accessTokenTtl()))
+                // For information only: the server reads the current role from the database on each request.
                 .claim("roles", List.of(user.getRole().name()))
                 .build();
         JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();

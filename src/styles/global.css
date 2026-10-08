@@ -709,3 +709,15 @@ a.button {
     padding: var(--space-lg) var(--space-md);
   }
 }
+
+/* Grey badge for secondary states ("Disabled", "You"); text, not only color, carries the meaning. */
+.badge--muted {
+  color: var(--color-text-muted);
+  background: var(--color-bg);
+  border-color: var(--color-border);
+}
+
+/* Extra content inside a confirm dialog (e.g. the role dropdown). */
+.dialog .field {
+  margin-top: var(--space-md);
+}

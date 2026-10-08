@@ -2,13 +2,17 @@ import PropTypes from 'prop-types';
 import FormField from '@/components/ui/FormField';
 import { getErrorId } from '@/utils/getErrorId';
 
+const toOption = (option) =>
+  typeof option === 'string' ? { value: option, label: option } : option;
+
 /**
  * Labelled dropdown with an error message.
  * @param {object} props
  * @param {string} props.id - unique id; also used as the select name.
  * @param {string} props.label - visible label text.
- * @param {string[]} props.options - values to choose from (shown as-is).
- * @param {string} props.placeholder - text of the empty first option.
+ * @param {(string|{value: string, label: string})[]} props.options - choices; a plain string is used
+ *   as both value and text, an object shows `label` but submits `value`.
+ * @param {string} [props.placeholder] - text of an empty first option; leave out to have none.
  * @param {string} props.value - currently selected value.
  * @param {Function} props.onChange - called when the selection changes.
  * @param {Function} [props.onBlur] - called when the select loses focus.
@@ -19,7 +23,7 @@ function Select({
   id,
   label,
   options,
-  placeholder,
+  placeholder = '',
   value,
   onChange,
   onBlur,
@@ -41,10 +45,10 @@ function Select({
         aria-describedby={hasError ? getErrorId(id) : undefined}
         className={`field__control ${hasError ? 'field__control--invalid' : ''}`}
       >
-        <option value="">{placeholder}</option>
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
+        {placeholder && <option value="">{placeholder}</option>}
+        {options.map(toOption).map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
           </option>
         ))}
       </select>
@@ -55,8 +59,13 @@ function Select({
 Select.propTypes = {
   id: PropTypes.string.isRequired,
   label: PropTypes.string.isRequired,
-  options: PropTypes.arrayOf(PropTypes.string).isRequired,
-  placeholder: PropTypes.string.isRequired,
+  options: PropTypes.arrayOf(
+    PropTypes.oneOfType([
+      PropTypes.string,
+      PropTypes.shape({ value: PropTypes.string.isRequired, label: PropTypes.string.isRequired }),
+    ]),
+  ).isRequired,
+  placeholder: PropTypes.string,
   value: PropTypes.string.isRequired,
   onChange: PropTypes.func.isRequired,
   onBlur: PropTypes.func,

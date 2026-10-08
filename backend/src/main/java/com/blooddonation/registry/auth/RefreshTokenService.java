@@ -64,7 +64,7 @@ public class RefreshTokenService {
             refreshTokenRepository.revokeAllForUser(user.getId());
             throw new UnauthorizedException(SESSION_ENDED);
         }
-        if (token.isExpired(clock.instant())) {
+        if (token.isExpired(clock.instant()) || !user.isEnabled()) {
             throw new UnauthorizedException(SESSION_ENDED);
         }
         token.revoke();

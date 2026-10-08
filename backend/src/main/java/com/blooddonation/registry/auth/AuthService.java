@@ -1,6 +1,7 @@
 package com.blooddonation.registry.auth;
 
 import com.blooddonation.registry.common.ConflictException;
+import com.blooddonation.registry.common.ForbiddenException;
 import com.blooddonation.registry.common.UnauthorizedException;
 import com.blooddonation.registry.user.AppUser;
 import com.blooddonation.registry.user.Role;
@@ -45,6 +46,10 @@ public class AuthService {
         // Same answer for "no such email" and "wrong password", so emails can't be discovered.
         if (user == null || !isPasswordCorrect) {
             throw new UnauthorizedException(LOGIN_FAILED);
+        }
+        // Only said after a correct password, so it doesn't reveal which accounts exist.
+        if (!user.isEnabled()) {
+            throw new ForbiddenException("This account has been disabled");
         }
         return new Session(toResponse(user), refreshTokenService.issue(user));
     }

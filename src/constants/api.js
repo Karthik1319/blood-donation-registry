@@ -9,6 +9,7 @@ export const API_ENDPOINTS = {
   DONOR_DONATIONS: (id) => `/donors/${id}/donations`,
   DONATION_BY_ID: (id) => `/donations/${id}`,
   USERS: '/users',
+  USER_BY_ID: (id) => `/users/${id}`,
 };
 
 export const HTTP_STATUS = {

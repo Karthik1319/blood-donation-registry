@@ -27,6 +27,7 @@ export const MESSAGES = {
 
   // Server / request results
   LOGIN_FAILED: 'Invalid email or password',
+  ACCOUNT_DISABLED: 'This account has been disabled. Please contact an administrator.',
   EMAIL_TAKEN: 'An account with this email already exists',
   DONOR_PHONE_TAKEN: 'Another donor already uses this phone number',
   DONATION_DATE_REQUIRED: 'Donation date is required',

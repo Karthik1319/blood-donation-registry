@@ -54,10 +54,17 @@ public abstract class ApiTestSupport {
 
     /** Saves a user with the given role and returns a valid "Bearer ..." header value for them. */
     protected String bearerFor(Role role) {
-        String email = role.name().toLowerCase() + "@test.org";
-        AppUser user = userRepository.save(new AppUser(
-                "Test " + role.name(), email, "9000000000", "O+", passwordEncoder.encode(PASSWORD), role));
+        return bearerFor(saveUser(role, role.name().toLowerCase() + "@test.org"));
+    }
+
+    protected String bearerFor(AppUser user) {
         return "Bearer " + accessTokenService.createFor(user);
+    }
+
+    /** Saves a user who can log in with PASSWORD. */
+    protected AppUser saveUser(Role role, String email) {
+        return userRepository.save(new AppUser(
+                "Test " + role.name(), email, "9000000000", "O+", passwordEncoder.encode(PASSWORD), role));
     }
 
     protected Donor saveDonor(String name, String phone) {

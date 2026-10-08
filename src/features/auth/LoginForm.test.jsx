@@ -40,4 +40,13 @@ describe('LoginForm', () => {
     await userEvent.click(screen.getByRole('button', { name: LABELS.LOGIN_BUTTON }));
     expect(await screen.findByText(MESSAGES.LOGIN_FAILED)).toBeInTheDocument();
   });
+
+  it('tells a disabled account that it is disabled (403 after a correct password)', async () => {
+    new MockAdapter(apiClient).onAny().reply(HTTP_STATUS.FORBIDDEN);
+    renderLoginForm();
+    await userEvent.type(screen.getByLabelText(LABELS.EMAIL, { exact: false }), 'x@y.com');
+    await userEvent.type(screen.getByLabelText(LABELS.PASSWORD, { exact: false }), 'Right@123');
+    await userEvent.click(screen.getByRole('button', { name: LABELS.LOGIN_BUTTON }));
+    expect(await screen.findByText(MESSAGES.ACCOUNT_DISABLED)).toBeInTheDocument();
+  });
 });

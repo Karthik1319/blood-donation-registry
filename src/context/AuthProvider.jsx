@@ -27,7 +27,7 @@ async function tryRefreshSession(setUser) {
 }
 
 /**
- * Provides { user, isRestoring, isSessionExpired, login, logout } to the whole app.
+ * Provides { user, isRestoring, isSessionExpired, dismissSessionExpired, login, logout } to the app.
  * @param {object} props
  * @param {React.ReactNode} props.children - the app.
  */
@@ -59,6 +59,9 @@ function AuthProvider({ children }) {
     };
   }, []);
 
+  // Called when the user tries to log in again, so the old notice doesn't stack with new errors.
+  const dismissSessionExpired = () => setIsSessionExpired(false);
+
   const login = (session) => {
     setIsSessionExpired(false);
     startSession(session, setUser);
@@ -70,7 +73,9 @@ function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isRestoring, isSessionExpired, login, logout }}>
+    <AuthContext.Provider
+      value={{ user, isRestoring, isSessionExpired, dismissSessionExpired, login, logout }}
+    >
       {children}
     </AuthContext.Provider>
   );

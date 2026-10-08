@@ -101,12 +101,54 @@ function DonorRow({ donor }) {
 }
 ```
 
+## Managing accounts (Admin)
+
+On the **Users** page an Admin can change a user's role and disable or enable an account
+(`PATCH /api/users/{id}`, Admin only).
+
+- **Takes effect immediately.** On every API request the backend looks the user up in the database
+  (`CurrentUserAuthenticationConverter`) instead of trusting the token alone. A disabled account is refused on its
+  very next request (401), and a new role applies at once, because the role is read from the database rather than
+  the token. Without this, an already-issued access token would keep its old rights until it expires (up to
+  15 minutes). The cost is one primary-key lookup per request.
+- **Sessions end.** Disabling or changing a role also revokes all of that user's refresh tokens.
+- **No self-changes.** An Admin can't disable or demote their own account (the backend answers 400 and the UI shows
+  no actions on their own row), so the last Admin can't lock everyone out.
+- **Disabled login.** With the correct password a disabled user is told "This account has been disabled"; with a
+  wrong password they get the usual generic message, so account status is never revealed without the password.
+
+## Known limitation: donor records are not linked to login accounts
+
+There are two separate things:
+
+|                                  | Created by                                    | Has                                           | Can log in |
+| -------------------------------- | --------------------------------------------- | --------------------------------------------- | ---------- |
+| **Donor record** (`donor` table) | Staff, on the Donors page                     | Name, blood group, phone, donations           | No         |
+| **Account** (`app_user` table)   | The person, on the Register page (role DONOR) | Name, **email**, password, phone, blood group | Yes        |
+
+A self-registered DONOR account is never connected to a donor record, so a donor can't yet see their own donation
+history; their Dashboard says it will appear later. Staff-added donors have no email, so they can't log in.
+
+**Why this wasn't linked automatically:** donation history is medical data. Matching accounts to donor records by
+phone number alone would let anyone register with another person's phone number and see that person's donations.
+A safe link needs **verified identity**: an SMS/OTP or email-verification service (not available here), or staff
+checking ID in person.
+
+**Planned design:**
+
+1. Migration: a nullable, unique `donor.user_id` column referencing `app_user(id)`.
+2. Linking: staff link an account to a donor record **after verifying identity in person**; later, optionally,
+   automatic linking after phone OTP verification.
+3. Donor portal: a "My donations" page for DONOR users (`GET /api/me/donations`), with a backend ownership check
+   (`donor.userId == currentUser.id`), plus their eligibility banner.
+4. Optional: staff send an email invitation so donors they added can create an account that is already linked.
+
 ## "Owner" rule
 
-Some apps let a record's owner edit or delete it. Here a donor record isn't linked to a login account yet
-(staff enter donors), so donor CRUD uses role permissions only: ADMIN/STAFF create and edit, ADMIN deletes. When
-donors get accounts, the backend can add an ownership check (`donor.userId == currentUser.id`), and
-`useCrudPermissions` can then allow DONOR users to edit their own profile.
+Some apps let a record's owner edit or delete it. Because donor records aren't linked to accounts yet (see above),
+donor CRUD uses role permissions only: ADMIN/STAFF create and edit, ADMIN deletes. Once they are linked, the
+backend can add an ownership check (`donor.userId == currentUser.id`), and `useCrudPermissions` can allow DONOR
+users to edit their own profile.
 
 ## Open questions for the team
 

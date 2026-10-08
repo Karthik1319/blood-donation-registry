@@ -12,6 +12,7 @@ Full stack: a **React** frontend (Vite, JavaScript) in this folder, and a **Spri
 - Login and registration with live Zod validation (password rules turn green as they are met)
 - Secure session: access token in memory only, refresh token in an HttpOnly cookie, silent refresh on expiry
 - Role-based access: protected routes, role-based sidebar, 403 page, buttons shown per permission
+- Admin user management: change roles, disable/enable accounts (takes effect on the user's next request)
 - Donors: list with search, blood-group filter and pagination; details; add/edit (one form); delete with confirmation
 - Donations: history per donor; add/edit (one form); delete; **90-day eligibility rule** with a live status banner
 - Success/error toasts for every create, update and delete; loading, error and empty states on every page
@@ -128,26 +129,27 @@ next one lands on Login with "Your session has expired".
 All paths are under `/api`, JSON in and out, Bearer token on every non-auth call. Error responses need no body: the
 frontend shows its own safe message for each status.
 
-| Endpoint                                      | Request body                                       | Success                                               | Errors the UI handles                      |
-| --------------------------------------------- | -------------------------------------------------- | ----------------------------------------------------- | ------------------------------------------ |
-| `POST /api/auth/login`                        | `{ email, password }`                              | `200 { accessToken, user }` + sets refresh cookie     | `400`/`401` → "Invalid email or password"  |
-| `POST /api/auth/register`                     | `{ fullName, email, phone, bloodGroup, password }` | `201`                                                 | `409` email taken, `400` invalid           |
-| `POST /api/auth/refresh`                      | none (cookie sent automatically)                   | `200 { accessToken, user }` + rotates cookie          | `401` → logged out                         |
-| `POST /api/auth/logout`                       | none                                               | `204`, cookie cleared                                 | ignored; the frontend logs out anyway      |
-| `GET /api/donors?page&size&search&bloodGroup` | none                                               | `200 { content: Donor[], totalElements, totalPages }` | `401` → refresh + retry once               |
-| `GET /api/donors/{id}`                        | none                                               | `200 Donor`                                           | `404`                                      |
-| `POST /api/donors`                            | `{ name, bloodGroup, phone }`                      | `201 Donor`                                           | `409` phone already used, `403`            |
-| `PUT /api/donors/{id}`                        | `{ name, bloodGroup, phone }`                      | `200 Donor`                                           | `409`, `404`, `403`                        |
-| `DELETE /api/donors/{id}`                     | none (Admin only)                                  | `204`; the donor's donations are deleted too          | `403`, `404`                               |
-| `GET /api/donors/{id}/donations`              | none                                               | `200 Donation[]`, newest first                        | `404` donor not found                      |
-| `POST /api/donors/{id}/donations`             | `{ donationDate, quantity, location }`             | `201 Donation`                                        | `422` within 90 days, `400` invalid, `403` |
-| `PUT /api/donations/{id}`                     | `{ donationDate, quantity, location }`             | `200 Donation`                                        | `422` within 90 days, `404`, `403`         |
-| `DELETE /api/donations/{id}`                  | none (Admin only)                                  | `204`                                                 | `403`, `404`                               |
-| `GET /api/users`                              | none (Admin only)                                  | `200 [{ id, fullName, email, role }]`                 | `403`                                      |
+| Endpoint                                      | Request body                                        | Success                                               | Errors the UI handles                      |
+| --------------------------------------------- | --------------------------------------------------- | ----------------------------------------------------- | ------------------------------------------ |
+| `POST /api/auth/login`                        | `{ email, password }`                               | `200 { accessToken, user }` + sets refresh cookie     | `400`/`401` → "Invalid email or password"  |
+| `POST /api/auth/register`                     | `{ fullName, email, phone, bloodGroup, password }`  | `201`                                                 | `409` email taken, `400` invalid           |
+| `POST /api/auth/refresh`                      | none (cookie sent automatically)                    | `200 { accessToken, user }` + rotates cookie          | `401` → logged out                         |
+| `POST /api/auth/logout`                       | none                                                | `204`, cookie cleared                                 | ignored; the frontend logs out anyway      |
+| `GET /api/donors?page&size&search&bloodGroup` | none                                                | `200 { content: Donor[], totalElements, totalPages }` | `401` → refresh + retry once               |
+| `GET /api/donors/{id}`                        | none                                                | `200 Donor`                                           | `404`                                      |
+| `POST /api/donors`                            | `{ name, bloodGroup, phone }`                       | `201 Donor`                                           | `409` phone already used, `403`            |
+| `PUT /api/donors/{id}`                        | `{ name, bloodGroup, phone }`                       | `200 Donor`                                           | `409`, `404`, `403`                        |
+| `DELETE /api/donors/{id}`                     | none (Admin only)                                   | `204`; the donor's donations are deleted too          | `403`, `404`                               |
+| `GET /api/donors/{id}/donations`              | none                                                | `200 Donation[]`, newest first                        | `404` donor not found                      |
+| `POST /api/donors/{id}/donations`             | `{ donationDate, quantity, location }`              | `201 Donation`                                        | `422` within 90 days, `400` invalid, `403` |
+| `PUT /api/donations/{id}`                     | `{ donationDate, quantity, location }`              | `200 Donation`                                        | `422` within 90 days, `404`, `403`         |
+| `DELETE /api/donations/{id}`                  | none (Admin only)                                   | `204`                                                 | `403`, `404`                               |
+| `GET /api/users`                              | none (Admin only)                                   | `200 [{ id, fullName, email, role, enabled }]`        | `403`                                      |
+| `PATCH /api/users/{id}`                       | `{ role?, enabled? }` (Admin only, not own account) | `200` updated user; the user's sessions end           | `400` own account / empty, `404`, `403`    |
 
 - `Donor` = `{ id, name, bloodGroup, phone }`
 - `Donation` = `{ id, donorId, donationDate: "YYYY-MM-DD", quantity (ml, 350–450), location }`
-- `user` = `{ id, fullName, email, role }`, where role is `ADMIN`, `STAFF` or `DONOR`
+- `user` = `{ id, fullName, email, role, enabled }`, where role is `ADMIN`, `STAFF` or `DONOR`
 - `page` starts at 0 (Spring Data style); empty filters are not sent
 - Refresh cookie: `HttpOnly; Secure; SameSite=Strict; Path=/api/auth`
 - Any other status: `5xx` → "Something went wrong"; no response or timeout → "Unable to reach the server"
@@ -179,6 +181,12 @@ src/
 ├── utils/                   # Pure helpers: dates, the 90-day rule, permissions, error messages, ...
 └── styles/                  # tokens.css (design tokens) + global.css
 ```
+
+## Known limitations
+
+- **Donor records aren't linked to login accounts yet.** Staff-added donors can't log in, and self-registered DONOR
+  accounts can't see their donation history. Linking safely needs identity verification, because donation history
+  is medical data. The planned design is in [`docs/rbac.md`](docs/rbac.md#known-limitation-donor-records-are-not-linked-to-login-accounts).
 
 ## Further reading
 

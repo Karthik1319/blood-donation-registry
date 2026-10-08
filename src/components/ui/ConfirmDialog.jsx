@@ -15,6 +15,8 @@ import Button from '@/components/ui/Button';
  * @param {Function} props.onConfirm - runs the action.
  * @param {Function} props.onCancel - closes the dialog without doing anything.
  * @param {boolean} [props.isConfirming] - true while the action runs; blocks closing.
+ * @param {'danger'|'primary'} [props.confirmVariant] - red for destructive actions, primary otherwise.
+ * @param {React.ReactNode} [props.children] - extra content under the message, e.g. a dropdown.
  */
 function ConfirmDialog({
   title,
@@ -25,6 +27,8 @@ function ConfirmDialog({
   onConfirm,
   onCancel,
   isConfirming = false,
+  confirmVariant = 'danger',
+  children = null,
 }) {
   const dialogRef = useRef(null);
   const titleId = useId();
@@ -55,12 +59,13 @@ function ConfirmDialog({
         {title}
       </h2>
       <p>{message}</p>
+      {children}
       <div className="dialog__actions">
         <Button variant="secondary" onClick={onCancel} isDisabled={isConfirming}>
           {cancelLabel}
         </Button>
         <Button
-          variant="danger"
+          variant={confirmVariant}
           onClick={onConfirm}
           isLoading={isConfirming}
           loadingText={confirmingLabel}
@@ -81,6 +86,8 @@ ConfirmDialog.propTypes = {
   onConfirm: PropTypes.func.isRequired,
   onCancel: PropTypes.func.isRequired,
   isConfirming: PropTypes.bool,
+  confirmVariant: PropTypes.oneOf(['danger', 'primary']),
+  children: PropTypes.node,
 };
 
 export default ConfirmDialog;

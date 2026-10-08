@@ -10,7 +10,7 @@ import { ROUTES } from '@/constants/routes';
 import DonorFilters from '@/features/donors/DonorFilters';
 import DonorTable from '@/features/donors/DonorTable';
 import { useDonors } from '@/features/donors/useDonors';
-import DeleteDialog from '@/features/shared/DeleteDialog';
+import ConfirmActionDialog from '@/features/shared/ConfirmActionDialog';
 import { useCrudPermissions } from '@/hooks/useCrudPermissions';
 import { deleteDonor } from '@/services/donorService';
 
@@ -72,13 +72,15 @@ function DonorListPage() {
         />
       </AsyncContent>
       {donorToDelete && (
-        <DeleteDialog
+        <ConfirmActionDialog
           title={LABELS.DELETE_DONOR_TITLE}
           message={LABELS.deleteDonorMessage(donorToDelete.name)}
-          onDelete={() => deleteDonor(donorToDelete.id)}
+          confirmLabel={LABELS.DELETE}
+          confirmingLabel={LABELS.DELETING}
+          onConfirm={() => deleteDonor(donorToDelete.id)}
           successMessage={LABELS.donorDeleted(donorToDelete.name)}
           onCancel={() => setDonorToDelete(null)}
-          onDeleted={handleDeleted}
+          onDone={handleDeleted}
         />
       )}
     </section>

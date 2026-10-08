@@ -6,6 +6,8 @@ import { apiRequest } from '@/services/apiClient';
 const LOGIN_ERRORS = {
   [HTTP_STATUS.BAD_REQUEST]: MESSAGES.LOGIN_FAILED,
   [HTTP_STATUS.UNAUTHORIZED]: MESSAGES.LOGIN_FAILED,
+  // Only sent after a correct password, so it doesn't reveal which accounts exist.
+  [HTTP_STATUS.FORBIDDEN]: MESSAGES.ACCOUNT_DISABLED,
 };
 
 const REGISTER_ERRORS = {

@@ -38,6 +38,10 @@ public class AppUser {
     @Column(nullable = false)
     private Role role;
 
+    /** A disabled account can't log in, refresh or call the API. */
+    @Column(nullable = false)
+    private boolean enabled = true;
+
     protected AppUser() {
         // Required by JPA.
     }
@@ -69,5 +73,17 @@ public class AppUser {
 
     public Role getRole() {
         return role;
+    }
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public void changeRole(Role newRole) {
+        this.role = newRole;
+    }
+
+    public void setEnabled(boolean isEnabled) {
+        this.enabled = isEnabled;
     }
 }

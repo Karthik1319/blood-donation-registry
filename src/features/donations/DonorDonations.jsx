@@ -8,7 +8,7 @@ import { CRUD_PERMISSIONS } from '@/constants/roles';
 import { getDonationNewPath } from '@/constants/routes';
 import DonationTable from '@/features/donations/DonationTable';
 import EligibilityStatus from '@/features/donations/EligibilityStatus';
-import DeleteDialog from '@/features/shared/DeleteDialog';
+import ConfirmActionDialog from '@/features/shared/ConfirmActionDialog';
 import { useCrudPermissions } from '@/hooks/useCrudPermissions';
 import { useFetch } from '@/hooks/useFetch';
 import { deleteDonation, getDonorDonations } from '@/services/donationService';
@@ -62,13 +62,15 @@ function DonorDonations({ donorId }) {
         )}
       </AsyncContent>
       {donationToDelete && (
-        <DeleteDialog
+        <ConfirmActionDialog
           title={LABELS.DELETE_DONATION_TITLE}
           message={LABELS.deleteDonationMessage(formatDate(donationToDelete.donationDate))}
-          onDelete={() => deleteDonation(donationToDelete.id)}
+          confirmLabel={LABELS.DELETE}
+          confirmingLabel={LABELS.DELETING}
+          onConfirm={() => deleteDonation(donationToDelete.id)}
           successMessage={LABELS.donationDeleted(formatDate(donationToDelete.donationDate))}
           onCancel={() => setDonationToDelete(null)}
-          onDeleted={handleDeleted}
+          onDone={handleDeleted}
         />
       )}
     </Card>
