@@ -28,8 +28,8 @@ Works the same on macOS and Linux (and Windows with Docker). You need **Node.js 
 Compose** and **Git**.
 
 ```bash
-git clone https://github.com/Karthik1319/blood-donation-registry1.git
-cd blood-donation-registry1
+git clone https://github.com/Karthik1319/blood-donation-registry.git
+cd blood-donation-registry
 
 # 1. Backend (first time: create backend/.env, see backend/README.md)
 cd backend
@@ -38,7 +38,7 @@ docker compose up -d               # PostgreSQL
 ./mvnw spring-boot:run             # API on http://localhost:8080 (leave running)
 
 # 2. Frontend, in a second terminal
-cd blood-donation-registry1
+cd blood-donation-registry
 npm ci
 npm run dev                        # open http://localhost:5173
 ```
