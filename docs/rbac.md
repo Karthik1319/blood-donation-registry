@@ -1,158 +1,92 @@
-# RBAC (Role-Based Access Control) for the Blood Donation Registry
+# Role-based access control
 
-## What is RBAC?
+Every account has exactly **one role**. Pages are allowed per role, actions per permission, and the backend
+enforces every rule on every request: the frontend only decides what to show.
 
-Each user gets **one role**; each role has a fixed list of **permissions**. The code checks permissions, not
-individual users. To change what Staff can do, you change the role's list once instead of editing every user.
+## Roles
 
-## Proposed roles
+| Role      | Who                                     | How the account is created                                 |
+| --------- | --------------------------------------- | ---------------------------------------------------------- |
+| **ADMIN** | Blood bank manager / system admin       | Seeded, or promoted by another Admin on the Users page     |
+| **STAFF** | Nurse or desk staff recording donations | Promoted by an Admin on the Users page                     |
+| **DONOR** | A person who donates blood              | Self-registration. Always DONOR: a `role` field is ignored |
 
-| Role      | Who                                    | How they get it                                         |
-| --------- | -------------------------------------- | ------------------------------------------------------- |
-| **ADMIN** | Blood bank manager / system admin      | Created by another admin or seeded in the database      |
-| **STAFF** | Nurse / desk staff recording donations | Created by an admin                                     |
-| **DONOR** | A person who donates blood             | Self-registration (the Register page); **always** DONOR |
+## What each role can do
 
-Self-registration never lets the user pick a role. The frontend doesn't send one and the backend ignores it if
-one is sent; otherwise anyone could register as ADMIN.
+| Action                                      | ADMIN | STAFF | DONOR |
+| ------------------------------------------- | :---: | :---: | :---: |
+| Dashboard                                   |   ✓   |   ✓   |   ✓   |
+| View, search and page through donors        |   ✓   |   ✓   |       |
+| View a donor's donation history             |   ✓   |   ✓   |       |
+| Add / edit donors                           |   ✓   |   ✓   |       |
+| Add / edit donations (90-day rule enforced) |   ✓   |   ✓   |       |
+| Delete donors and donations                 |   ✓   |       |       |
+| Manage accounts (roles, enable / disable)   |   ✓   |       |       |
 
-## Permission matrix
+Deletes are Admin-only because they destroy medical history, and they always ask for confirmation first.
 
-| Permission                          | ADMIN | STAFF |      DONOR       |
-| ----------------------------------- | :---: | :---: | :--------------: |
-| View all donors / search / paginate |  ✅   |  ✅   |        ❌        |
-| Create donor                        |  ✅   |  ✅   |        ❌        |
-| Update donor                        |  ✅   |  ✅   | Own profile only |
-| Delete donor                        |  ✅   |  ❌   |        ❌        |
-| View all donations                  |  ✅   |  ✅   |        ❌        |
-| View `/donors/:id/donations`        |  ✅   |  ✅   |   Own id only    |
-| Record donation (90-day check runs) |  ✅   |  ✅   |        ❌        |
-| Update donation                     |  ✅   |  ✅   |        ❌        |
-| Delete donation                     |  ✅   |  ❌   |        ❌        |
-| Manage staff accounts               |  ✅   |  ❌   |        ❌        |
+## Where the rules are enforced
 
-Deletes are ADMIN-only because they destroy medical history. The UI also asks for confirmation first.
+### Backend: the real gate
 
-## Where RBAC is implemented
-
-### 1. Backend (Spring Boot): the real security gate
-
-Everything here is enforced. If the backend doesn't check it, it isn't protected.
-
-| Layer                       | What to do                                                                                |
-| --------------------------- | ----------------------------------------------------------------------------------------- |
-| Database                    | `users.role` column (enum `ADMIN`, `STAFF`, `DONOR`); donor row linked to its user        |
-| Login / token               | Put the role in the access token (JWT claim `role`) and in the login response `user.role` |
-| URL rules                   | `SecurityFilterChain`: e.g. `DELETE /api/donors/**` → `hasRole('ADMIN')`                  |
-| Method rules                | `@PreAuthorize("hasAnyRole('ADMIN','STAFF')")` on service/controller methods              |
-| Ownership ("own data only") | In the service: if role is DONOR, check `donor.userId == currentUser.id`, else 403        |
-| Errors                      | 401 = not logged in / token expired, 403 = logged in but not allowed                      |
-| Audit                       | Log who created/updated/deleted what and when (banking requirement)                       |
-
-Example (illustration for later, not part of this frontend task):
+| Concern           | Implementation                                                                                                                                                                             |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Who may call what | One list in `config/SecurityConfig.java`; anything not listed is denied (`anyRequest().denyAll()`)                                                                                         |
+| Who is calling    | A signed JWT access token (15 min) identifies the user                                                                                                                                     |
+| Current rights    | `CurrentUserAuthenticationConverter` loads the user from the database on **every** request: a disabled account gets 401 and the role comes from the database, so changes apply immediately |
+| Answers           | 401 = not logged in, expired or disabled; 403 = logged in but not allowed                                                                                                                  |
+| Registration      | Always creates DONOR; the request can't choose a role                                                                                                                                      |
 
 ```java
-http.authorizeHttpRequests(auth -> auth
-    .requestMatchers("/api/auth/**").permitAll()
-    .requestMatchers(HttpMethod.DELETE, "/api/**").hasRole("ADMIN")
-    .requestMatchers("/api/donors/**", "/api/donations/**").hasAnyRole("ADMIN", "STAFF", "DONOR")
-    .anyRequest().authenticated());
-
-@PreAuthorize("hasRole('ADMIN') or @donorSecurity.isOwner(#donorId)")
-public List<DonationDto> getDonationsForDonor(Long donorId) { ... }
+.requestMatchers("/api/users/**").hasRole(ADMIN)
+.requestMatchers(DELETE, "/api/donors/**", "/api/donations/**").hasRole(ADMIN)
+.requestMatchers("/api/donors/**", "/api/donations/**").hasAnyRole(ADMIN, STAFF)
+.anyRequest().denyAll()
 ```
 
-### 2. Frontend (React): user experience only
+### Frontend: user experience only
 
-Hiding a button only means the user doesn't see it. They can still call the API directly, so the backend
-must check every rule.
+Hiding a page or button doesn't stop anyone from calling the API, which is why the backend checks everything.
+Every place that hides something says so in a comment.
 
-| Where                                                                       | Status   | What it does                                                                                                                |
-| --------------------------------------------------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `src/constants/roles.js`                                                    | ✅ Added | `ROLES`, `ROLE_LABELS`, `PERMISSIONS`, `ROLE_PERMISSIONS`                                                                   |
-| `src/utils/hasPermission.js`                                                | ✅ Added | `hasPermission(user, PERMISSIONS.DONOR_DELETE)` → show/hide buttons                                                         |
-| `src/features/auth/ProtectedRoute.jsx` / `RoleRoute.jsx` / `GuestRoute.jsx` | ✅ Added | Login required / role required (403 page) / logged-in users kept away from Login                                            |
-| `src/components/layout/Topbar.jsx`                                          | ✅ Added | Shows the role as text next to the user's name                                                                              |
-| `src/pages/DonorListPage.jsx` + `Sidebar.jsx`                               | ✅ Added | Donors route is ADMIN/STAFF only; Delete button ADMIN only; sidebar items filtered by `ROUTE_ROLES`; `/users` is ADMIN only |
-| `apiClient.js` 403 handling                                                 | ✅ Added | Shows "You do not have permission…" when the backend refuses                                                                |
+| Concern                 | Implementation                                                                                                                                           |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Pages and menu items    | `ROUTE_ROLES` in `src/constants/roles.js`, read by both `RoleRoute` (shows a 403 page) and the `Sidebar`, so a page and its menu item can never disagree |
+| Buttons                 | `ROLE_PERMISSIONS` + `useCrudPermissions` decide whether Add / Edit / Delete appear                                                                      |
+| Logged-out vs logged-in | `ProtectedRoute` sends logged-out users to Login; `GuestRoute` keeps logged-in users away from Login                                                     |
+| Server refusals         | A 403 from the API is shown as "You do not have permission to do this."                                                                                  |
 
-Example of how future code will use it:
-
-```jsx
-// App.jsx: only Admin and Staff can open the donor list page.
-<Route
-  path={ROUTES.DONORS}
-  element={
-    <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.STAFF]}>
-      <DonorListPage />
-    </ProtectedRoute>
-  }
-/>;
-
-// DonorRow.jsx: hiding the button is UX, NOT security; the API enforces this rule.
-function DonorRow({ donor }) {
-  const { user } = useAuth();
-  const canDelete = hasPermission(user, PERMISSIONS.DONOR_DELETE);
-  return (
-    <li>
-      {donor.name} {canDelete && <Button onClick={confirmDelete}>Delete</Button>}
-    </li>
-  );
-}
-```
-
-## Managing accounts (Admin)
+## Managing accounts
 
 On the **Users** page an Admin can change a user's role and disable or enable an account
-(`PATCH /api/users/{id}`, Admin only).
+(`PATCH /api/users/{id}`).
 
-- **Takes effect immediately.** On every API request the backend looks the user up in the database
-  (`CurrentUserAuthenticationConverter`) instead of trusting the token alone. A disabled account is refused on its
-  very next request (401), and a new role applies at once, because the role is read from the database rather than
-  the token. Without this, an already-issued access token would keep its old rights until it expires (up to
-  15 minutes). The cost is one primary-key lookup per request.
+- **Takes effect immediately.** Because every request is checked against the database, a disabled account is
+  refused on its next request and a new role applies at once. A plain JWT setup would keep the old rights until the
+  token expires (up to 15 minutes). The cost is one primary-key lookup per request.
 - **Sessions end.** Disabling or changing a role also revokes all of that user's refresh tokens.
-- **No self-changes.** An Admin can't disable or demote their own account (the backend answers 400 and the UI shows
-  no actions on their own row), so the last Admin can't lock everyone out.
-- **Disabled login.** With the correct password a disabled user is told "This account has been disabled"; with a
-  wrong password they get the usual generic message, so account status is never revealed without the password.
+- **No self-changes.** An Admin can't disable or demote their own account (400, and no buttons on their own row),
+  so the last Admin can't lock everyone out.
+- **Disabled login.** Only after a correct password is the user told the account is disabled (403); a wrong
+  password gets the usual generic message, so account status is never revealed to someone guessing.
 
-## Known limitation: donor records are not linked to login accounts
+## Known limitation: donor records aren't linked to login accounts
 
-There are two separate things:
+|                                  | Created by                       | Has                                       | Can log in |
+| -------------------------------- | -------------------------------- | ----------------------------------------- | ---------- |
+| **Donor record** (`donor` table) | Staff, on the Donors page        | Name, blood group, phone, donations       | No         |
+| **Account** (`app_user` table)   | The person, on the Register page | Name, email, password, phone, blood group | Yes        |
 
-|                                  | Created by                                    | Has                                           | Can log in |
-| -------------------------------- | --------------------------------------------- | --------------------------------------------- | ---------- |
-| **Donor record** (`donor` table) | Staff, on the Donors page                     | Name, blood group, phone, donations           | No         |
-| **Account** (`app_user` table)   | The person, on the Register page (role DONOR) | Name, **email**, password, phone, blood group | Yes        |
+A DONOR account therefore can't see its own donation history yet.
 
-A self-registered DONOR account is never connected to a donor record, so a donor can't yet see their own donation
-history; their Dashboard says it will appear later. Staff-added donors have no email, so they can't log in.
-
-**Why this wasn't linked automatically:** donation history is medical data. Matching accounts to donor records by
-phone number alone would let anyone register with another person's phone number and see that person's donations.
-A safe link needs **verified identity**: an SMS/OTP or email-verification service (not available here), or staff
-checking ID in person.
+**Why not link them by phone number?** Donation history is medical data. Matching on an unverified phone number
+would let anyone register with someone else's number and read their records. A safe link needs verified identity:
+an SMS/OTP or email-verification service, or staff checking ID in person.
 
 **Planned design:**
 
-1. Migration: a nullable, unique `donor.user_id` column referencing `app_user(id)`.
-2. Linking: staff link an account to a donor record **after verifying identity in person**; later, optionally,
-   automatic linking after phone OTP verification.
-3. Donor portal: a "My donations" page for DONOR users (`GET /api/me/donations`), with a backend ownership check
-   (`donor.userId == currentUser.id`), plus their eligibility banner.
-4. Optional: staff send an email invitation so donors they added can create an account that is already linked.
-
-## "Owner" rule
-
-Some apps let a record's owner edit or delete it. Because donor records aren't linked to accounts yet (see above),
-donor CRUD uses role permissions only: ADMIN/STAFF create and edit, ADMIN deletes. Once they are linked, the
-backend can add an ownership check (`donor.userId == currentUser.id`), and `useCrudPermissions` can allow DONOR
-users to edit their own profile.
-
-## Open questions for the team
-
-1. Should a DONOR be able to log in at all in phase 1, or is the app staff-only for now?
-2. Can STAFF edit a donation after it's recorded, or only ADMIN (stricter audit)?
-3. Should the backend send the permission list in the login response instead of the frontend copying
-   `ROLE_PERMISSIONS`? That avoids the two lists drifting apart.
+1. A nullable, unique `donor.user_id` column referencing `app_user(id)`.
+2. Staff link an account to a donor record after verifying identity; optionally, automatic linking after phone OTP.
+3. A "My donations" page for DONOR users (`GET /api/me/donations`) with a backend ownership check
+   (`donor.userId == currentUser.id`), showing their eligibility.
+4. Optionally, staff send an email invitation so donors they added can create an already-linked account.

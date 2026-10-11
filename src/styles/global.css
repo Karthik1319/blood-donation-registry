@@ -588,7 +588,7 @@ a.button {
   }
 }
 
-/* ---------- Day 5: page actions, form buttons, table actions ---------- */
+/* ---------- Page actions, form buttons, table actions ---------- */
 .page-header__row {
   display: flex;
   flex-wrap: wrap;

@@ -9,7 +9,7 @@ import { useForm } from '@/hooks/useForm';
 
 /**
  * The one donor form, used for both "Add donor" and "Edit donor"; only the starting values and
- * button text differ. Validated live with donorSchema (Zod), like the Day 1 forms.
+ * button text differ. Validated live with donorSchema (Zod), like the login and registration forms.
  * @param {object} props
  * @param {{name: string, bloodGroup: string, phone: string}} props.initialValues - starting values.
  * @param {Function} props.onSubmit - async, called with the validated values.

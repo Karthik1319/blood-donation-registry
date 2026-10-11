@@ -7,6 +7,9 @@ shows each donor's eligibility. Access is role-based: Admin, Staff and Donor acc
 Full stack: a **React** frontend (Vite, JavaScript) in this folder, and a **Spring Boot** API with **PostgreSQL** in
 [`backend/`](backend/README.md).
 
+The project began as a structured training assignment (frontend first, built to banking-app coding standards) and
+was then extended into a complete full-stack application with its own backend, database and test suites.
+
 ## Features
 
 - Login and registration with live Zod validation (password rules turn green as they are met)
@@ -191,7 +194,6 @@ src/
 ## Further reading
 
 - [`backend/README.md`](backend/README.md): backend setup, security and business rules
-- [`docs/walkthrough.md`](docs/walkthrough.md): review guide (structure, auth flow, RBAC, one feature end to end)
 - [`docs/token-storage.md`](docs/token-storage.md): why the token is kept in memory plus an HttpOnly cookie
 - [`docs/rbac.md`](docs/rbac.md): roles, permissions and where each rule is enforced
 
